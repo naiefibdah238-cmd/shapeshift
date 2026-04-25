@@ -76,14 +76,21 @@ export default function NutritionPage() {
     <div className="flex flex-col min-h-screen">
       <NavBar />
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
-        {/* Header */}
-        <div className="mb-10 animate-fade-up">
-          <h1 className="text-2xl font-semibold text-ink tracking-tight">Nutrition targets</h1>
-          <p className="text-sm text-muted mt-1">
-            TDEE, macro targets, and meal timing for hybrid athletes. Starting points — not prescriptions.
-          </p>
+      {/* Page hero */}
+      <section className="relative h-52 lg:h-64 flex items-end overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center scale-105"
+          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1800&q=80&fit=crop')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/70 to-ink/40" />
+        <div className="relative z-10 max-w-6xl mx-auto w-full px-6 pb-8 animate-fade-up">
+          <p className="text-2xs font-bold tracking-widest uppercase text-accent mb-2">Nutrition calculator</p>
+          <h1 className="text-3xl lg:text-4xl font-bold text-white tracking-tight">Fuel your training.</h1>
+          <p className="text-sm text-white/60 mt-1">TDEE, macros, and meal timing for hybrid athletes. Starting points — not prescriptions.</p>
         </div>
+      </section>
+
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
 
         <div className="max-w-2xl">
           {/* Units toggle */}
