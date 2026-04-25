@@ -3,6 +3,21 @@
 import Link from 'next/link'
 import Footer from '@/components/Footer'
 import { useScrollReveal } from '@/hooks/useScrollReveal'
+import { getDailyQuote } from '@/lib/quotes'
+
+function QuoteBlock() {
+  const quote = getDailyQuote()
+  return (
+    <blockquote className="border-l-2 border-accent pl-8">
+      <p className="text-2xl lg:text-3xl font-medium text-white leading-snug tracking-tight">
+        &ldquo;{quote.text}&rdquo;
+      </p>
+      {quote.author !== 'Unknown' && (
+        <footer className="mt-4 text-sm text-white/40 uppercase tracking-widest">— {quote.author}</footer>
+      )}
+    </blockquote>
+  )
+}
 
 export default function LandingPage() {
   useScrollReveal()
@@ -119,6 +134,14 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Daily quote */}
+      <section className="bg-stone-950 border-t border-white/10">
+        <div className="max-w-6xl mx-auto px-6 py-16 reveal">
+          <p className="text-2xs font-bold tracking-widest uppercase text-accent mb-6">Today&apos;s reminder</p>
+          <QuoteBlock />
         </div>
       </section>
 
