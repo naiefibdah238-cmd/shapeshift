@@ -22,10 +22,24 @@ const GOAL_LABELS: Record<string, string> = {
   recomp: 'Body recomp',
 }
 
+function getWeekRange() {
+  const now = new Date()
+  const day = now.getDay()
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - ((day + 6) % 7))
+  monday.setHours(0, 0, 0, 0)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  sunday.setHours(23, 59, 59, 999)
+  return {
+    from: monday.toISOString().split('T')[0],
+    to: sunday.toISOString().split('T')[0],
+  }
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) redirect('/login?next=/dashboard')
 
   const { data: plans, error } = await supabase
@@ -34,6 +48,21 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
+  // Weekly food log stats
+  const { from, to } = getWeekRange()
+  const { data: weekLog } = await supabase
+    .from('food_log')
+    .select('logged_date, calories, protein_g')
+    .eq('user_id', user.id)
+    .gte('logged_date', from)
+    .lte('logged_date', to)
+
+  const daysLogged = new Set(weekLog?.map(e => e.logged_date) ?? []).size
+  const totalCals = weekLog?.reduce((a, e) => a + e.calories, 0) ?? 0
+  const totalProtein = weekLog?.reduce((a, e) => a + Number(e.protein_g), 0) ?? 0
+  const avgCals = daysLogged > 0 ? Math.round(totalCals / daysLogged) : 0
+  const avgProtein = daysLogged > 0 ? Math.round(totalProtein / daysLogged) : 0
+
   return (
     <div className="flex flex-col min-h-screen">
       <NavBar />
@@ -41,13 +70,26 @@ export default async function DashboardPage() {
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
         <DailyQuote />
 
-        <div className="flex items-end justify-between mb-10">
-          <div>
-            <h1 className="text-2xl font-semibold text-ink tracking-tight">My plans</h1>
-            <p className="text-sm text-muted mt-1">
-              {plans?.length ?? 0} saved {plans?.length === 1 ? 'plan' : 'plans'}
-            </p>
-          </div>
+        {/* Weekly summary */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-rule border border-rule mb-10">
+          {[
+            { label: 'Days logged', value: daysLogged, unit: '/ 7', highlight: daysLogged >= 5 },
+            { label: 'Avg calories', value: avgCals > 0 ? avgCals.toLocaleString() : '—', unit: avgCals > 0 ? 'kcal/day' : '' },
+            { label: 'Avg protein', value: avgProtein > 0 ? avgProtein : '—', unit: avgProtein > 0 ? 'g/day' : '' },
+            { label: 'Saved plans', value: plans?.length ?? 0, unit: '' },
+          ].map(stat => (
+            <div key={stat.label} className="bg-white px-5 py-5">
+              <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-1">{stat.label}</p>
+              <p className={`text-3xl font-bold tracking-tight ${stat.highlight ? 'text-accent' : 'text-ink'}`}>
+                {stat.value}
+                {stat.unit && <span className="text-sm font-normal text-muted ml-1">{stat.unit}</span>}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-end justify-between mb-6">
+          <h2 className="text-base font-semibold text-ink tracking-tight">My plans</h2>
           <Link href="/planner" className="btn-primary text-xs px-4 py-2">
             New plan
           </Link>
@@ -66,7 +108,6 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="border border-rule divide-y divide-rule">
-            {/* Header row */}
             <div className="grid grid-cols-12 px-6 py-3 bg-cream">
               <span className="col-span-5 text-2xs font-semibold tracking-widest uppercase text-muted">Name</span>
               <span className="col-span-3 text-2xs font-semibold tracking-widest uppercase text-muted">Goal</span>

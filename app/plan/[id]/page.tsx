@@ -122,8 +122,11 @@ export default function PlanDetailPage() {
     return (
       <div className="flex flex-col min-h-screen">
         <NavBar />
-        <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
-          <p className="text-sm text-muted">Loading...</p>
+        <div className="h-52 bg-stone-900 animate-pulse" />
+        <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12 space-y-4">
+          <div className="h-4 w-32 bg-rule rounded animate-pulse" />
+          <div className="h-8 w-64 bg-rule rounded animate-pulse" />
+          <div className="h-4 w-48 bg-rule rounded animate-pulse" />
         </main>
       </div>
     )
@@ -133,11 +136,10 @@ export default function PlanDetailPage() {
     return (
       <div className="flex flex-col min-h-screen">
         <NavBar />
-        <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
-          <p className="text-sm text-muted mb-4">Plan not found.</p>
-          <Link href="/dashboard" className="text-sm text-ink underline underline-offset-2">
-            Back to my plans
-          </Link>
+        <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-24 text-center">
+          <p className="text-2xl font-bold text-ink mb-2">Plan not found</p>
+          <p className="text-sm text-muted mb-6">This plan may have been deleted or doesn&apos;t belong to your account.</p>
+          <Link href="/dashboard" className="btn-primary text-xs px-6 py-3">Back to my plans</Link>
         </main>
       </div>
     )
@@ -147,70 +149,62 @@ export default function PlanDetailPage() {
     <div className="flex flex-col min-h-screen">
       <NavBar />
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-8 text-xs text-muted">
-          <Link href="/dashboard" className="hover:text-ink transition-colors">My plans</Link>
-          <span>/</span>
-          <span className="text-ink">{dbPlan?.name}</span>
-        </div>
-
-        {/* Plan header */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
-          <div className="flex-1">
-            {editingName ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={nameValue}
-                  onChange={e => setNameValue(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }}
-                  className="input-field text-xl font-semibold max-w-sm"
-                  autoFocus
-                />
-                <button onClick={handleSaveName} disabled={savingName} className="btn-primary text-xs px-3 py-2">
-                  {savingName ? 'Saving...' : 'Save'}
+      {/* Hero */}
+      <section className="relative h-52 lg:h-64 flex items-end overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center scale-105"
+          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1800&q=80&fit=crop')` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/70 to-ink/40" />
+        <div className="relative z-10 max-w-6xl mx-auto w-full px-6 pb-8 animate-fade-up">
+          <Link href="/dashboard" className="text-2xs text-white/40 hover:text-white/70 transition-colors uppercase tracking-widest mb-3 block">
+            ← My plans
+          </Link>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              {editingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={nameValue}
+                    onChange={e => setNameValue(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false) }}
+                    className="bg-white/10 border border-white/30 text-white px-3 py-1.5 text-lg font-semibold focus:outline-none focus:border-white/60 w-64"
+                    autoFocus
+                  />
+                  <button onClick={handleSaveName} disabled={savingName} className="text-xs text-white/70 hover:text-white border border-white/30 px-3 py-1.5 transition-colors">
+                    {savingName ? '...' : 'Save'}
+                  </button>
+                  <button onClick={() => setEditingName(false)} className="text-xs text-white/40 hover:text-white/70 transition-colors">Cancel</button>
+                </div>
+              ) : (
+                <button onClick={() => setEditingName(true)} className="group flex items-center gap-2 text-left">
+                  <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight group-hover:text-white/80 transition-colors">
+                    {dbPlan?.name}
+                  </h1>
+                  <svg className="w-4 h-4 text-white/30 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
                 </button>
-                <button onClick={() => setEditingName(false)} className="btn-ghost text-xs">
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setEditingName(true)}
-                className="group flex items-center gap-2"
-                title="Click to edit name"
-              >
-                <h1 className="text-2xl font-semibold text-ink tracking-tight group-hover:text-accent transition-colors">
-                  {dbPlan?.name}
-                </h1>
-                <svg className="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
+              )}
+              <p className="text-sm text-white/50 mt-1">
+                {plan.inputs.trainingDays} days/wk · {GOAL_LABELS[plan.inputs.primaryGoal]}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button onClick={() => setShowRegenConfirm(true)} className="text-xs text-white/70 hover:text-white border border-white/30 hover:border-white/60 px-4 py-2 transition-all">
+                Regenerate
               </button>
-            )}
-            <p className="text-sm text-muted mt-1">
-              {plan.inputs.trainingDays} days/wk — {GOAL_LABELS[plan.inputs.primaryGoal]}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setShowRegenConfirm(true)}
-              className="btn-secondary text-xs px-4 py-2"
-            >
-              Regenerate
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="btn-ghost text-xs text-red-600 hover:text-red-700"
-            >
-              Delete
-            </button>
+              <button onClick={() => setShowDeleteConfirm(true)} className="text-xs text-red-400 hover:text-red-300 border border-red-400/30 hover:border-red-400/60 px-4 py-2 transition-all">
+                Delete
+              </button>
+            </div>
           </div>
         </div>
+      </section>
 
-        <p className="text-xs text-muted mb-6">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
+        <p className="text-xs text-muted mb-6 animate-fade-up">
           Click any session to swap it for a valid alternative.
         </p>
 
@@ -218,7 +212,7 @@ export default function PlanDetailPage() {
         <WeeklyGrid plan={plan} onSwap={setSwapDayIndex} swappable={true} />
 
         {/* Programming notes */}
-        <div className="mt-8 max-w-3xl">
+        <div className="mt-8 max-w-3xl reveal">
           <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-4">
             Programming notes
           </p>
