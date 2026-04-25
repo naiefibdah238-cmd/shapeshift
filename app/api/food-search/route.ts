@@ -10,15 +10,15 @@ export async function GET(req: NextRequest) {
     const url = new URL('https://api.nal.usda.gov/fdc/v1/foods/search')
     url.searchParams.set('query', q)
     url.searchParams.set('api_key', USDA_KEY)
-    url.searchParams.set('dataType', 'Foundation,SR Legacy')
-    url.searchParams.set('pageSize', '12')
+    url.searchParams.set('dataType', 'Foundation,SR Legacy,Survey (FNDDS)')
+    url.searchParams.set('pageSize', '15')
 
     const res = await fetch(url.toString(), { next: { revalidate: 3600 } })
     const data = await res.json()
 
     const results = (data.foods ?? []).map((food: Record<string, unknown>) => {
-      const nutrients = (food.foodNutrients as Array<{ nutrientId: number; value: number }>) ?? []
-      const get = (id: number) => nutrients.find(n => n.nutrientId === id)?.value ?? 0
+      const nutrients = (food.foodNutrients as Array<{ nutrientId?: number; nutrientNumber?: number; value: number }>) ?? []
+      const get = (id: number) => nutrients.find(n => n.nutrientId === id || n.nutrientNumber === id)?.value ?? 0
       const servingSize = food.servingSize as number | undefined
       const servingSizeUnit = (food.servingSizeUnit as string | undefined)?.toLowerCase()
       const householdServing = food.householdServingFullText as string | undefined
