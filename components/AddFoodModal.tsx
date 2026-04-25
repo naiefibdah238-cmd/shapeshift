@@ -20,13 +20,18 @@ interface Props {
   onClose: () => void
 }
 
+type MeasureMode = 'grams' | 'servings'
+
 export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
   const [tab, setTab] = useState<'search' | 'manual'>('search')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<FoodSearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [selected, setSelected] = useState<FoodSearchResult | null>(null)
+  const [measureMode, setMeasureMode] = useState<MeasureMode>('grams')
   const [grams, setGrams] = useState(100)
+  const [servings, setServings] = useState(1)
+  const [gramsPerServing, setGramsPerServing] = useState(100)
   const [manual, setManual] = useState({ name: '', calories: '', protein: '', carbs: '', fat: '' })
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -44,20 +49,38 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
     }, 400)
   }, [query])
 
+  function selectFood(food: FoodSearchResult) {
+    setSelected(food)
+    setResults([])
+    if (food.servingGrams) {
+      setMeasureMode('servings')
+      setGramsPerServing(food.servingGrams)
+      setServings(1)
+    } else {
+      setMeasureMode('grams')
+      setGrams(100)
+    }
+  }
+
+  const totalGrams = measureMode === 'servings' ? servings * gramsPerServing : grams
+
   const preview = selected ? {
-    calories: Math.round(selected.per100g.calories * grams / 100),
-    protein: Math.round(selected.per100g.protein * grams / 100 * 10) / 10,
-    carbs: Math.round(selected.per100g.carbs * grams / 100 * 10) / 10,
-    fat: Math.round(selected.per100g.fat * grams / 100 * 10) / 10,
+    calories: Math.round(selected.per100g.calories * totalGrams / 100),
+    protein: Math.round(selected.per100g.protein * totalGrams / 100 * 10) / 10,
+    carbs: Math.round(selected.per100g.carbs * totalGrams / 100 * 10) / 10,
+    fat: Math.round(selected.per100g.fat * totalGrams / 100 * 10) / 10,
   } : null
 
   const canAdd = tab === 'search'
-    ? (selected !== null && grams > 0)
+    ? selected !== null && totalGrams > 0
     : manual.name.trim() !== '' && manual.calories !== ''
 
   function handleAdd() {
     if (tab === 'search' && selected && preview) {
-      onAdd({ food_name: selected.name, calories: preview.calories, protein_g: preview.protein, carbs_g: preview.carbs, fat_g: preview.fat, grams, meal_type: meal })
+      const name = measureMode === 'servings'
+        ? `${selected.name} ×${servings}`
+        : selected.name
+      onAdd({ food_name: name, calories: preview.calories, protein_g: preview.protein, carbs_g: preview.carbs, fat_g: preview.fat, grams: Math.round(totalGrams), meal_type: meal })
     } else if (tab === 'manual' && manual.name) {
       onAdd({ food_name: manual.name, calories: parseInt(manual.calories) || 0, protein_g: parseFloat(manual.protein) || 0, carbs_g: parseFloat(manual.carbs) || 0, fat_g: parseFloat(manual.fat) || 0, grams: 0, meal_type: meal })
     }
@@ -88,7 +111,7 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
             <div className="space-y-4">
               <input
                 type="text"
-                placeholder="e.g. chicken breast, brown rice..."
+                placeholder="e.g. eggs, chicken breast, oats..."
                 value={query}
                 onChange={e => { setQuery(e.target.value); setSelected(null) }}
                 className="input-field"
@@ -109,11 +132,16 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
                   {results.map(r => (
                     <button
                       key={r.id}
-                      onClick={() => { setSelected(r); setResults([]) }}
-                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-cream transition-colors group"
+                      onClick={() => selectFood(r)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-cream transition-colors"
                     >
                       <span className="text-sm text-ink pr-4 leading-snug">{r.name}</span>
-                      <span className="text-xs text-muted font-mono flex-shrink-0">{r.per100g.calories} kcal/100g</span>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs text-muted font-mono">{r.per100g.calories} kcal/100g</p>
+                        {r.householdServing && r.servingGrams && (
+                          <p className="text-2xs text-accent mt-0.5">{r.householdServing} = {r.servingGrams}g</p>
+                        )}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -129,21 +157,73 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
                     <div>
                       <p className="text-sm font-semibold text-ink leading-snug">{selected.name}</p>
                       <p className="text-2xs text-muted mt-1 font-mono">
-                        {selected.per100g.calories} kcal · {selected.per100g.protein}g P · {selected.per100g.carbs}g C · {selected.per100g.fat}g F <span className="text-muted/60">per 100g</span>
+                        {selected.per100g.calories} kcal · {selected.per100g.protein}g P · {selected.per100g.carbs}g C · {selected.per100g.fat}g F <span className="opacity-60">per 100g</span>
                       </p>
                     </div>
                     <button onClick={() => { setSelected(null); setQuery('') }} className="text-2xs text-muted hover:text-ink flex-shrink-0 underline underline-offset-2">Change</button>
                   </div>
 
+                  {/* Measure mode toggle */}
                   <div>
-                    <label className="label">Amount (grams)</label>
-                    <input
-                      type="number"
-                      value={grams}
-                      onChange={e => setGrams(parseFloat(e.target.value) || 0)}
-                      className="input-field"
-                      min={1}
-                    />
+                    <div className="flex border border-rule mb-3">
+                      <button
+                        onClick={() => setMeasureMode('grams')}
+                        className={`flex-1 py-2 text-xs font-semibold uppercase tracking-widest transition-colors ${measureMode === 'grams' ? 'bg-ink text-white' : 'text-muted hover:text-ink'}`}
+                      >
+                        By weight (g)
+                      </button>
+                      <button
+                        onClick={() => setMeasureMode('servings')}
+                        className={`flex-1 py-2 text-xs font-semibold uppercase tracking-widest transition-colors ${measureMode === 'servings' ? 'bg-ink text-white' : 'text-muted hover:text-ink'}`}
+                      >
+                        By unit / serving
+                      </button>
+                    </div>
+
+                    {measureMode === 'grams' ? (
+                      <div>
+                        <label className="label">Amount (grams)</label>
+                        <input
+                          type="number"
+                          value={grams}
+                          onChange={e => setGrams(parseFloat(e.target.value) || 0)}
+                          className="input-field"
+                          min={1}
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="label">Quantity</label>
+                            <input
+                              type="number"
+                              value={servings}
+                              onChange={e => setServings(parseFloat(e.target.value) || 0)}
+                              className="input-field"
+                              min={0.5}
+                              step={0.5}
+                            />
+                          </div>
+                          <div>
+                            <label className="label">Grams per unit</label>
+                            <input
+                              type="number"
+                              value={gramsPerServing}
+                              onChange={e => setGramsPerServing(parseFloat(e.target.value) || 0)}
+                              className="input-field"
+                              min={1}
+                            />
+                          </div>
+                        </div>
+                        {selected.householdServing && selected.servingGrams && (
+                          <p className="text-2xs text-accent">
+                            USDA serving: {selected.householdServing} = {selected.servingGrams}g
+                          </p>
+                        )}
+                        <p className="text-2xs text-muted">Total: {Math.round(totalGrams)}g</p>
+                      </div>
+                    )}
                   </div>
 
                   {preview && (
@@ -168,7 +248,7 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
             <div className="space-y-4">
               <div>
                 <label className="label">Food name</label>
-                <input type="text" placeholder="e.g. Grilled chicken breast" value={manual.name} onChange={e => setManual(p => ({ ...p, name: e.target.value }))} className="input-field" autoFocus />
+                <input type="text" placeholder="e.g. 2 scrambled eggs" value={manual.name} onChange={e => setManual(p => ({ ...p, name: e.target.value }))} className="input-field" autoFocus />
               </div>
               <div>
                 <label className="label">Calories (kcal)</label>

@@ -19,6 +19,10 @@ export async function GET(req: NextRequest) {
     const results = (data.foods ?? []).map((food: Record<string, unknown>) => {
       const nutrients = (food.foodNutrients as Array<{ nutrientId: number; value: number }>) ?? []
       const get = (id: number) => nutrients.find(n => n.nutrientId === id)?.value ?? 0
+      const servingSize = food.servingSize as number | undefined
+      const servingSizeUnit = (food.servingSizeUnit as string | undefined)?.toLowerCase()
+      const householdServing = food.householdServingFullText as string | undefined
+      const servingGrams = servingSize && servingSizeUnit === 'g' ? Math.round(servingSize) : null
       return {
         id: food.fdcId,
         name: (food.description as string)
@@ -30,6 +34,8 @@ export async function GET(req: NextRequest) {
           carbs: Math.round(get(1005) * 10) / 10,
           fat: Math.round(get(1004) * 10) / 10,
         },
+        servingGrams,
+        householdServing: householdServing ?? null,
       }
     })
 

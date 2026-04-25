@@ -37,4 +37,6 @@ export interface FoodSearchResult {
     carbs: number
     fat: number
   }
+  servingGrams: number | null
+  householdServing: string | null
 }
