@@ -52,6 +52,12 @@ export default function NavBar() {
           >
             Nutrition
           </Link>
+          <Link
+            href="/food-log"
+            className={`text-sm transition-colors ${pathname === '/food-log' ? 'text-ink font-medium' : 'text-muted hover:text-ink'}`}
+          >
+            Food log
+          </Link>
 
           {!loading && (
             user ? (
