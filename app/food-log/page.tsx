@@ -25,6 +25,18 @@ function displayDate(d: Date) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
+function getWeekDays() {
+  const today = new Date()
+  const day = today.getDay()
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - ((day + 6) % 7))
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d
+  })
+}
+
 function MacroBar({ label, val, target, color }: { label: string; val: number; target: number; color: string }) {
   const pct = Math.min((val / target) * 100, 100)
   return (
@@ -40,6 +52,8 @@ function MacroBar({ label, val, target, color }: { label: string; val: number; t
   )
 }
 
+interface DaySummary { date: string; calories: number; protein_g: number; carbs_g: number; fat_g: number }
+
 export default function FoodLogPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -49,6 +63,8 @@ export default function FoodLogPage() {
   const [addMeal, setAddMeal] = useState<MealType | null>(null)
   const [showTargets, setShowTargets] = useState(false)
   const [streak, setStreak] = useState(0)
+  const [weekData, setWeekData] = useState<DaySummary[]>([])
+  const [copyMsg, setCopyMsg] = useState('')
   const supabase = createClient()
   const router = useRouter()
 
@@ -63,31 +79,20 @@ export default function FoodLogPage() {
   const loadEntries = useCallback(async () => {
     if (!user) return
     const { data } = await supabase
-      .from('food_log')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('logged_date', formatDate(date))
-      .order('created_at')
+      .from('food_log').select('*').eq('user_id', user.id)
+      .eq('logged_date', formatDate(date)).order('created_at')
     setEntries(data ?? [])
   }, [user, date])
 
   const loadTargets = useCallback(async () => {
     if (!user) return
-    const { data } = await supabase
-      .from('nutrition_targets')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
+    const { data } = await supabase.from('nutrition_targets').select('*').eq('user_id', user.id).single()
     if (data) setTargets({ calories: data.calories, protein_g: data.protein_g, carbs_g: data.carbs_g, fat_g: data.fat_g })
   }, [user])
 
   const loadStreak = useCallback(async () => {
     if (!user) return
-    const { data } = await supabase
-      .from('food_log')
-      .select('logged_date')
-      .eq('user_id', user.id)
-      .order('logged_date', { ascending: false })
+    const { data } = await supabase.from('food_log').select('logged_date').eq('user_id', user.id).order('logged_date', { ascending: false })
     if (!data) return
     const dates = [...new Set(data.map(e => e.logged_date))] as string[]
     if (dates.length === 0) return
@@ -104,8 +109,27 @@ export default function FoodLogPage() {
     setStreak(s)
   }, [user])
 
+  const loadWeekData = useCallback(async () => {
+    if (!user) return
+    const days = getWeekDays()
+    const from = formatDate(days[0])
+    const to = formatDate(days[6])
+    const { data } = await supabase.from('food_log').select('logged_date, calories, protein_g, carbs_g, fat_g')
+      .eq('user_id', user.id).gte('logged_date', from).lte('logged_date', to)
+    if (!data) return
+    const byDate: Record<string, DaySummary> = {}
+    for (const e of data) {
+      if (!byDate[e.logged_date]) byDate[e.logged_date] = { date: e.logged_date, calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
+      byDate[e.logged_date].calories += e.calories
+      byDate[e.logged_date].protein_g += Number(e.protein_g)
+      byDate[e.logged_date].carbs_g += Number(e.carbs_g)
+      byDate[e.logged_date].fat_g += Number(e.fat_g)
+    }
+    setWeekData(days.map(d => byDate[formatDate(d)] ?? { date: formatDate(d), calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }))
+  }, [user])
+
   useEffect(() => {
-    if (user) { loadEntries(); loadTargets(); loadStreak() }
+    if (user) { loadEntries(); loadTargets(); loadStreak(); loadWeekData() }
   }, [user, date])
 
   async function handleAdd(entry: Omit<FoodEntry, 'id' | 'logged_date'>) {
@@ -113,11 +137,27 @@ export default function FoodLogPage() {
     await supabase.from('food_log').insert({ ...entry, user_id: user.id, logged_date: formatDate(date) })
     setAddMeal(null)
     loadEntries()
+    loadWeekData()
   }
 
   async function handleDelete(id: string) {
     await supabase.from('food_log').delete().eq('id', id)
     loadEntries()
+    loadWeekData()
+  }
+
+  async function handleCopyYesterday() {
+    if (!user) return
+    const yesterday = formatDate(new Date(date.getTime() - 86400000))
+    const { data } = await supabase.from('food_log')
+      .select('meal_type, food_name, calories, protein_g, carbs_g, fat_g, grams')
+      .eq('user_id', user.id).eq('logged_date', yesterday)
+    if (!data || data.length === 0) { setCopyMsg('Nothing logged yesterday.'); setTimeout(() => setCopyMsg(''), 3000); return }
+    await supabase.from('food_log').insert(data.map(e => ({ ...e, user_id: user.id, logged_date: formatDate(date) })))
+    loadEntries()
+    loadWeekData()
+    setCopyMsg(`Copied ${data.length} item${data.length > 1 ? 's' : ''} from yesterday.`)
+    setTimeout(() => setCopyMsg(''), 3000)
   }
 
   async function handleSaveTargets(t: NutritionTarget) {
@@ -131,9 +171,9 @@ export default function FoodLogPage() {
     (acc, e) => ({ calories: acc.calories + e.calories, protein_g: acc.protein_g + e.protein_g, carbs_g: acc.carbs_g + e.carbs_g, fat_g: acc.fat_g + e.fat_g }),
     { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   )
-
   const remaining = targets.calories - totals.calories
   const isOver = remaining < 0
+  const isToday = formatDate(date) === formatDate(new Date())
 
   if (loading) return null
 
@@ -141,12 +181,8 @@ export default function FoodLogPage() {
     <div className="flex flex-col min-h-screen">
       <NavBar />
 
-      {/* Hero */}
       <section className="relative h-52 lg:h-64 flex items-end overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center scale-105"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1800&q=80&fit=crop')` }}
-        />
+        <div className="absolute inset-0 bg-cover bg-center scale-105" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1800&q=80&fit=crop')` }} />
         <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/70 to-ink/40" />
         <div className="relative z-10 max-w-6xl mx-auto w-full px-6 pb-8 animate-fade-up">
           <p className="text-2xs font-bold tracking-widest uppercase text-accent mb-2">Food log</p>
@@ -156,29 +192,16 @@ export default function FoodLogPage() {
       </section>
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
-        {/* Date nav + streak */}
+        {/* Date nav */}
         <div className="flex items-center justify-between mb-8 animate-fade-up">
-          <button
-            onClick={() => setDate(d => new Date(d.getTime() - 86400000))}
-            className="flex items-center gap-1 text-sm text-muted hover:text-ink transition-colors px-2 py-1"
-          >
+          <button onClick={() => setDate(d => new Date(d.getTime() - 86400000))} className="flex items-center gap-1 text-sm text-muted hover:text-ink transition-colors px-2 py-1">
             ← <span className="hidden sm:inline">Prev</span>
           </button>
-
           <div className="flex flex-col items-center gap-1">
             <span className="text-sm font-semibold text-ink tracking-tight">{displayDate(date)}</span>
-            {streak >= 2 && (
-              <span className="text-xs font-bold text-accent tracking-wide animate-fade-up">
-                🔥 {streak}-day streak
-              </span>
-            )}
+            {streak >= 2 && <span className="text-xs font-bold text-accent tracking-wide">🔥 {streak}-day streak</span>}
           </div>
-
-          <button
-            onClick={() => setDate(d => new Date(d.getTime() + 86400000))}
-            disabled={formatDate(date) === formatDate(new Date())}
-            className="flex items-center gap-1 text-sm text-muted hover:text-ink transition-colors px-2 py-1 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
+          <button onClick={() => setDate(d => new Date(d.getTime() + 86400000))} disabled={isToday} className="flex items-center gap-1 text-sm text-muted hover:text-ink transition-colors px-2 py-1 disabled:opacity-30 disabled:cursor-not-allowed">
             <span className="hidden sm:inline">Next</span> →
           </button>
         </div>
@@ -203,14 +226,9 @@ export default function FoodLogPage() {
               </button>
             </div>
           </div>
-
           <div className="h-1.5 bg-white/10 mb-5 mt-4">
-            <div
-              className={`h-full transition-all duration-700 ${isOver ? 'bg-red-400' : 'bg-accent'}`}
-              style={{ width: `${Math.min((totals.calories / targets.calories) * 100, 100)}%` }}
-            />
+            <div className={`h-full transition-all duration-700 ${isOver ? 'bg-red-400' : 'bg-accent'}`} style={{ width: `${Math.min((totals.calories / targets.calories) * 100, 100)}%` }} />
           </div>
-
           <div className="grid grid-cols-3 gap-6">
             <MacroBar label="Protein" val={totals.protein_g} target={targets.protein_g} color="bg-white" />
             <MacroBar label="Carbs" val={totals.carbs_g} target={targets.carbs_g} color="bg-accent" />
@@ -218,32 +236,32 @@ export default function FoodLogPage() {
           </div>
         </div>
 
+        {/* Copy yesterday + toast */}
+        {isToday && (
+          <div className="flex items-center justify-between mb-6 animate-fade-up delay-200">
+            <button onClick={handleCopyYesterday} className="text-xs text-muted hover:text-ink border border-rule hover:border-ink px-4 py-2 transition-all uppercase tracking-widest font-semibold">
+              ↩ Copy yesterday&apos;s meals
+            </button>
+            {copyMsg && <span className="text-xs text-accent font-medium animate-fade-up">{copyMsg}</span>}
+          </div>
+        )}
+
         {/* Meal sections */}
         <div className="space-y-6">
           {MEALS.map((meal, i) => {
             const mealEntries = entries.filter(e => e.meal_type === meal)
             const mealCals = mealEntries.reduce((a, e) => a + e.calories, 0)
             return (
-              <div
-                key={meal}
-                className="animate-fade-up"
-                style={{ animationDelay: `${200 + i * 80}ms`, animationFillMode: 'both' }}
-              >
+              <div key={meal} className="animate-fade-up" style={{ animationDelay: `${250 + i * 80}ms`, animationFillMode: 'both' }}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-bold tracking-widest uppercase text-ink">{MEAL_LABELS[meal]}</span>
-                    {mealCals > 0 && (
-                      <span className="text-xs text-muted font-mono">{mealCals} kcal</span>
-                    )}
+                    {mealCals > 0 && <span className="text-xs text-muted font-mono">{mealCals} kcal</span>}
                   </div>
-                  <button
-                    onClick={() => setAddMeal(meal)}
-                    className="text-2xs font-semibold text-muted hover:text-ink transition-colors uppercase tracking-widest border border-rule px-3 py-1.5 hover:border-ink"
-                  >
+                  <button onClick={() => setAddMeal(meal)} className="text-2xs font-semibold text-muted hover:text-ink transition-colors uppercase tracking-widest border border-rule px-3 py-1.5 hover:border-ink">
                     + Add
                   </button>
                 </div>
-
                 <div className="border border-rule divide-y divide-rule">
                   {mealEntries.length === 0 ? (
                     <div className="px-4 py-4 text-xs text-muted/60 italic bg-white">Nothing logged yet</div>
@@ -252,24 +270,12 @@ export default function FoodLogPage() {
                       <div key={entry.id} className="flex items-center gap-3 px-4 py-3 bg-white hover:bg-cream transition-colors group">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-ink truncate">{entry.food_name}</p>
-                          {entry.grams > 0 && (
-                            <p className="text-2xs text-muted font-mono mt-0.5">{entry.grams}g</p>
-                          )}
+                          {entry.grams > 0 && <p className="text-2xs text-muted font-mono mt-0.5">{entry.grams}g</p>}
                         </div>
                         <div className="flex items-center gap-4 flex-shrink-0">
-                          <span className="text-xs text-muted font-mono hidden sm:block">
-                            {entry.protein_g}p · {entry.carbs_g}c · {entry.fat_g}f
-                          </span>
-                          <span className="text-sm font-semibold text-ink tabular-nums w-16 text-right">
-                            {entry.calories} kcal
-                          </span>
-                          <button
-                            onClick={() => handleDelete(entry.id)}
-                            className="text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 text-xl leading-none w-5 text-center"
-                            aria-label="Remove"
-                          >
-                            ×
-                          </button>
+                          <span className="text-xs text-muted font-mono hidden sm:block">{entry.protein_g}p · {entry.carbs_g}c · {entry.fat_g}f</span>
+                          <span className="text-sm font-semibold text-ink tabular-nums w-16 text-right">{entry.calories} kcal</span>
+                          <button onClick={() => handleDelete(entry.id)} className="text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 text-xl leading-none w-5 text-center" aria-label="Remove">×</button>
                         </div>
                       </div>
                     ))
@@ -279,31 +285,56 @@ export default function FoodLogPage() {
             )
           })}
         </div>
+
+        {/* Weekly summary */}
+        {weekData.length > 0 && (
+          <div className="mt-12 reveal">
+            <p className="text-2xs font-bold tracking-widest uppercase text-muted mb-4">This week</p>
+            <div className="border border-rule divide-y divide-rule">
+              <div className="grid grid-cols-5 px-4 py-2 bg-cream">
+                {['Day', 'Calories', 'Protein', 'Carbs', 'Fat'].map(h => (
+                  <span key={h} className="text-2xs font-semibold tracking-widest uppercase text-muted">{h}</span>
+                ))}
+              </div>
+              {weekData.map((day, i) => {
+                const isCurrentDay = day.date === formatDate(date)
+                const hasData = day.calories > 0
+                const dayName = new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })
+                return (
+                  <button
+                    key={day.date}
+                    onClick={() => setDate(new Date(day.date + 'T12:00:00'))}
+                    className={`grid grid-cols-5 px-4 py-3 w-full text-left transition-colors ${isCurrentDay ? 'bg-ink text-white' : 'bg-white hover:bg-cream'}`}
+                  >
+                    <span className={`text-sm font-semibold ${isCurrentDay ? 'text-white' : 'text-ink'}`}>{dayName}</span>
+                    <span className={`text-sm font-mono ${isCurrentDay ? 'text-white' : hasData ? 'text-ink' : 'text-muted/40'}`}>{hasData ? day.calories.toLocaleString() : '—'}</span>
+                    <span className={`text-sm font-mono ${isCurrentDay ? 'text-white/70' : 'text-muted'}`}>{hasData ? `${Math.round(day.protein_g)}g` : '—'}</span>
+                    <span className={`text-sm font-mono ${isCurrentDay ? 'text-white/70' : 'text-muted'}`}>{hasData ? `${Math.round(day.carbs_g)}g` : '—'}</span>
+                    <span className={`text-sm font-mono ${isCurrentDay ? 'text-white/70' : 'text-muted'}`}>{hasData ? `${Math.round(day.fat_g)}g` : '—'}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />
 
-      {addMeal && (
-        <AddFoodModal meal={addMeal} onAdd={handleAdd} onClose={() => setAddMeal(null)} />
-      )}
-
-      {showTargets && (
-        <TargetsModal current={targets} onSave={handleSaveTargets} onClose={() => setShowTargets(false)} />
-      )}
+      {addMeal && <AddFoodModal meal={addMeal} onAdd={handleAdd} onClose={() => setAddMeal(null)} />}
+      {showTargets && <TargetsModal current={targets} onSave={handleSaveTargets} onClose={() => setShowTargets(false)} />}
     </div>
   )
 }
 
 function TargetsModal({ current, onSave, onClose }: { current: NutritionTarget; onSave: (t: NutritionTarget) => void; onClose: () => void }) {
   const [t, setT] = useState(current)
-
   const fields: { key: keyof NutritionTarget; label: string }[] = [
     { key: 'calories', label: 'Calories (kcal)' },
     { key: 'protein_g', label: 'Protein (g)' },
     { key: 'carbs_g', label: 'Carbs (g)' },
     { key: 'fat_g', label: 'Fat (g)' },
   ]
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-sm p-4">
       <div className="bg-white w-full max-w-sm border border-rule animate-fade-up">
@@ -315,13 +346,7 @@ function TargetsModal({ current, onSave, onClose }: { current: NutritionTarget; 
           {fields.map(f => (
             <div key={f.key}>
               <label className="label">{f.label}</label>
-              <input
-                type="number"
-                value={t[f.key]}
-                onChange={e => setT(prev => ({ ...prev, [f.key]: parseInt(e.target.value) || 0 }))}
-                className="input-field"
-                min={0}
-              />
+              <input type="number" value={t[f.key]} onChange={e => setT(prev => ({ ...prev, [f.key]: parseInt(e.target.value) || 0 }))} className="input-field" min={0} />
             </div>
           ))}
         </div>

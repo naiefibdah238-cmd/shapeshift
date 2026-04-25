@@ -22,6 +22,26 @@ interface Props {
 
 type MeasureMode = 'grams' | 'servings'
 
+const RECENT_KEY = 'ss_recent_foods'
+const MAX_RECENT = 8
+
+interface RecentFood {
+  name: string
+  per100g: { calories: number; protein: number; carbs: number; fat: number }
+  servingGrams: number | null
+  householdServing: string | null
+  lastGrams: number
+}
+
+function loadRecent(): RecentFood[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]') } catch { return [] }
+}
+
+function saveRecent(food: RecentFood) {
+  const existing = loadRecent().filter(f => f.name !== food.name)
+  localStorage.setItem(RECENT_KEY, JSON.stringify([food, ...existing].slice(0, MAX_RECENT)))
+}
+
 export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
   const [tab, setTab] = useState<'search' | 'manual'>('search')
   const [query, setQuery] = useState('')
@@ -33,7 +53,10 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
   const [servings, setServings] = useState(1)
   const [gramsPerServing, setGramsPerServing] = useState(100)
   const [manual, setManual] = useState({ name: '', calories: '', protein: '', carbs: '', fat: '' })
+  const [recentFoods, setRecentFoods] = useState<RecentFood[]>([])
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { setRecentFoods(loadRecent()) }, [])
 
   useEffect(() => {
     if (query.length < 2) { setResults([]); return }
@@ -77,12 +100,21 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
 
   function handleAdd() {
     if (tab === 'search' && selected && preview) {
-      const name = measureMode === 'servings'
-        ? `${selected.name} ×${servings}`
-        : selected.name
+      const name = measureMode === 'servings' ? `${selected.name} ×${servings}` : selected.name
+      saveRecent({ name: selected.name, per100g: selected.per100g, servingGrams: selected.servingGrams, householdServing: selected.householdServing, lastGrams: Math.round(totalGrams) })
       onAdd({ food_name: name, calories: preview.calories, protein_g: preview.protein, carbs_g: preview.carbs, fat_g: preview.fat, grams: Math.round(totalGrams), meal_type: meal })
     } else if (tab === 'manual' && manual.name) {
       onAdd({ food_name: manual.name, calories: parseInt(manual.calories) || 0, protein_g: parseFloat(manual.protein) || 0, carbs_g: parseFloat(manual.carbs) || 0, fat_g: parseFloat(manual.fat) || 0, grams: 0, meal_type: meal })
+    }
+  }
+
+  function selectRecent(r: RecentFood) {
+    const asFoodResult: FoodSearchResult = { id: r.name, name: r.name, per100g: r.per100g, servingGrams: r.servingGrams, householdServing: r.householdServing }
+    selectFood(asFoodResult)
+    if (r.servingGrams) {
+      setServings(Math.round((r.lastGrams / r.servingGrams) * 10) / 10 || 1)
+    } else {
+      setGrams(r.lastGrams)
     }
   }
 
@@ -124,6 +156,25 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
                   <span className="w-1 h-1 bg-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-1 h-1 bg-accent rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   <span>Searching USDA database...</span>
+                </div>
+              )}
+
+              {/* Recent foods */}
+              {!selected && !searching && query.length < 2 && recentFoods.length > 0 && (
+                <div>
+                  <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-2">Recent</p>
+                  <div className="border border-rule divide-y divide-rule">
+                    {recentFoods.map(r => (
+                      <button
+                        key={r.name}
+                        onClick={() => selectRecent(r)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-cream transition-colors"
+                      >
+                        <span className="text-sm text-ink pr-4 leading-snug">{r.name}</span>
+                        <span className="text-xs text-muted font-mono flex-shrink-0">{r.per100g.calories} kcal/100g</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
