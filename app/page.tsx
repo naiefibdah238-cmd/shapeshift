@@ -8,14 +8,15 @@ import { getDailyQuote } from '@/lib/quotes'
 function QuoteBlock() {
   const quote = getDailyQuote()
   return (
-    <p className="text-xs text-white/70 leading-relaxed">
-      <span className="text-accent font-semibold">&ldquo;</span>
-      {quote.text}
-      <span className="text-accent font-semibold">&rdquo;</span>
+    <div className="max-w-3xl mx-auto">
+      <p className="text-2xs font-bold tracking-widest uppercase text-accent mb-3">Today&apos;s reminder</p>
+      <p className="text-xl lg:text-2xl font-semibold text-white leading-snug tracking-tight">
+        &ldquo;{quote.text}&rdquo;
+      </p>
       {quote.author !== 'Unknown' && (
-        <span className="text-white/40 ml-2">— {quote.author}</span>
+        <p className="text-sm text-white/40 mt-3 uppercase tracking-widest">— {quote.author}</p>
       )}
-    </p>
+    </div>
   )
 }
 
@@ -25,7 +26,7 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-ink">
       {/* Quote bar */}
-      <div className="bg-accent/10 border-b border-accent/20 px-6 py-2.5 text-center animate-fade-in">
+      <div className="bg-stone-950 border-b border-white/10 px-6 py-8 text-center animate-fade-in">
         <QuoteBlock />
       </div>
 
