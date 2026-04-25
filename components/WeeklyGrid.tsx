@@ -1,0 +1,154 @@
+'use client'
+
+import type { DayPlan, SessionType, WeeklyPlan } from '@/lib/programming-logic'
+
+const SESSION_CLASS: Record<SessionType, string> = {
+  lower_strength:     'session-lower-strength',
+  upper_strength:     'session-upper-strength',
+  lower_hypertrophy:  'session-lower-hypertrophy',
+  upper_hypertrophy:  'session-upper-hypertrophy',
+  full_body_strength: 'session-full-body-strength',
+  full_body_accessory:'session-full-body-accessory',
+  long_endurance:     'session-long-endurance',
+  zone2_medium:       'session-zone2-medium',
+  zone2_short:        'session-zone2-short',
+  tempo:              'session-tempo',
+  intervals:          'session-intervals',
+  mobility:           'session-mobility',
+  rest:               'session-rest',
+}
+
+const SESSION_BADGE: Record<SessionType, string> = {
+  lower_strength:     'LOWER / STRENGTH',
+  upper_strength:     'UPPER / STRENGTH',
+  lower_hypertrophy:  'LOWER / HYPERTROPHY',
+  upper_hypertrophy:  'UPPER / HYPERTROPHY',
+  full_body_strength: 'FULL BODY / STRENGTH',
+  full_body_accessory:'ACCESSORY',
+  long_endurance:     'LONG ENDURANCE',
+  zone2_medium:       'ZONE 2',
+  zone2_short:        'ZONE 2 / SHORT',
+  tempo:              'TEMPO',
+  intervals:          'INTERVALS',
+  mobility:           'MOBILITY',
+  rest:               'REST',
+}
+
+function DayCell({
+  day,
+  onSwap,
+  swappable = false,
+}: {
+  day: DayPlan
+  onSwap?: (dayIndex: number) => void
+  swappable?: boolean
+}) {
+  const dayIndex = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].indexOf(day.day)
+  const isRest = day.sessionType === 'rest'
+
+  return (
+    <div
+      className={`
+        relative flex flex-col min-h-[160px] border-b border-r border-rule bg-white
+        ${SESSION_CLASS[day.sessionType]}
+        ${swappable && !isRest ? 'cursor-pointer hover:bg-cream transition-colors group' : ''}
+      `}
+      onClick={swappable && !isRest ? () => onSwap?.(dayIndex) : undefined}
+    >
+      {/* Day label */}
+      <div className="px-3 pt-2 pb-1 border-b border-rule">
+        <span className="text-2xs font-semibold tracking-widest uppercase text-muted">
+          {day.day.slice(0, 3)}
+        </span>
+      </div>
+
+      {/* Session content */}
+      <div className="px-3 py-3 flex flex-col gap-2 flex-1">
+        {/* Badge */}
+        <span className="text-2xs font-semibold tracking-wider uppercase text-muted/70">
+          {SESSION_BADGE[day.sessionType]}
+        </span>
+
+        {/* Session name */}
+        <p className={`text-sm font-medium leading-snug ${isRest ? 'text-muted' : 'text-ink'}`}>
+          {day.sessionName}
+        </p>
+
+        {/* Duration */}
+        {!isRest && (
+          <span className="text-2xs text-muted font-mono">
+            {day.estimatedDuration}
+          </span>
+        )}
+
+        {/* Rationale */}
+        {!isRest && (
+          <p className="text-2xs text-muted/80 leading-relaxed mt-auto pt-2 border-t border-rule/50">
+            {day.rationale}
+          </p>
+        )}
+      </div>
+
+      {/* Swap hint for interactive mode */}
+      {swappable && !isRest && (
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-2xs text-muted border border-rule px-1.5 py-0.5 bg-paper">
+            swap
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface Props {
+  plan: WeeklyPlan
+  onSwap?: (dayIndex: number) => void
+  swappable?: boolean
+}
+
+export default function WeeklyGrid({ plan, onSwap, swappable = false }: Props) {
+  return (
+    <div className="w-full overflow-x-auto">
+      {/* Desktop: 7-column grid */}
+      <div className="hidden lg:grid lg:grid-cols-7 border-t border-l border-rule min-w-[900px]">
+        {plan.days.map((day, i) => (
+          <DayCell key={i} day={day} onSwap={onSwap} swappable={swappable} />
+        ))}
+      </div>
+
+      {/* Mobile: stacked list */}
+      <div className="lg:hidden divide-y divide-rule border border-rule">
+        {plan.days.map((day, i) => (
+          <div key={i} className={`flex gap-0 ${SESSION_CLASS[day.sessionType]}`}>
+            {/* Left: day + badge */}
+            <div className="w-20 flex-shrink-0 px-3 py-4 flex flex-col gap-1">
+              <span className="text-xs font-semibold tracking-wide text-muted uppercase">
+                {day.day.slice(0, 3)}
+              </span>
+              <span className="text-2xs text-muted/60 uppercase tracking-wider leading-tight">
+                {SESSION_BADGE[day.sessionType]}
+              </span>
+            </div>
+
+            {/* Right: session info */}
+            <div
+              className={`flex-1 px-3 py-4 border-l border-rule bg-white ${swappable && day.sessionType !== 'rest' ? 'cursor-pointer active:bg-cream' : ''}`}
+              onClick={swappable && day.sessionType !== 'rest' ? () => onSwap?.(i) : undefined}
+            >
+              <p className={`text-sm font-medium leading-snug ${day.sessionType === 'rest' ? 'text-muted' : 'text-ink'}`}>
+                {day.sessionName}
+              </p>
+              {day.sessionType !== 'rest' && (
+                <>
+                  <p className="text-2xs font-mono text-muted mt-1">{day.estimatedDuration}</p>
+                  <p className="text-2xs text-muted/80 mt-2 leading-relaxed">{day.rationale}</p>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

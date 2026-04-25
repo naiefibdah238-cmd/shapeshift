@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-paper text-ink;
+  }
+
+  ::selection {
+    @apply bg-accent text-white;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 bg-ink text-white text-sm font-medium tracking-wide transition-all duration-150;
+  }
+  .btn-primary:hover {
+    @apply bg-accent;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-ink text-ink text-sm font-medium tracking-wide transition-all duration-150;
+  }
+  .btn-secondary:hover {
+    @apply bg-ink text-white;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center px-4 py-2 text-muted text-sm font-medium transition-all duration-150;
+  }
+  .btn-ghost:hover {
+    @apply text-ink;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 border border-rule bg-white text-ink text-sm focus:outline-none focus:border-ink transition-colors duration-150;
+  }
+  .input-field:focus {
+    @apply border-ink;
+  }
+
+  .label {
+    @apply block text-xs font-medium tracking-widest uppercase text-muted mb-2;
+  }
+
+  .select-option {
+    @apply flex items-center gap-3 px-4 py-3 border border-rule text-sm cursor-pointer transition-all duration-150 select-none;
+  }
+  .select-option:hover {
+    @apply border-ink;
+  }
+  .select-option.selected {
+    @apply border-ink bg-ink text-white;
+  }
+
+  /* Session type left-border accent colors */
+  .session-lower-strength    { @apply border-l-4 border-l-ink; }
+  .session-upper-strength    { @apply border-l-4 border-l-ink; }
+  .session-full-body-strength{ @apply border-l-4 border-l-ink; }
+  .session-lower-hypertrophy { @apply border-l-4 border-l-rule-strong; }
+  .session-upper-hypertrophy { @apply border-l-4 border-l-rule-strong; }
+  .session-full-body-accessory{ @apply border-l-4 border-l-rule-strong; }
+  .session-long-endurance    { @apply border-l-4 border-l-blue-600; }
+  .session-zone2-medium      { @apply border-l-4 border-l-blue-400; }
+  .session-zone2-short       { @apply border-l-4 border-l-blue-300; }
+  .session-tempo             { @apply border-l-4 border-l-accent; }
+  .session-intervals         { @apply border-l-4 border-l-accent; }
+  .session-mobility          { @apply border-l-4 border-l-teal-500; }
+  .session-rest              { @apply border-l-4 border-l-rule; }
+}
