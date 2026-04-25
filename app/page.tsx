@@ -72,8 +72,7 @@ export default function LandingPage() {
               <span className="text-accent">Properly.</span>
             </h1>
             <p className="text-lg text-white/70 leading-relaxed mb-10 max-w-lg animate-fade-up delay-200">
-              For athletes who lift heavy and train endurance — not beginners, not bro-splits.
-              Interference-aware scheduling built around how your body actually recovers.
+              Lift heavy. Run far. Do both without burning out.
             </p>
             <div className="flex flex-wrap items-center gap-4 animate-fade-up delay-300">
               <Link
