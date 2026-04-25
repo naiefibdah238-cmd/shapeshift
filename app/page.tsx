@@ -33,7 +33,10 @@ export default function LandingPage() {
       {/* Nav */}
       <header className="sticky top-0 left-0 right-0 z-20 animate-fade-in">
         <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="text-sm font-semibold tracking-tight text-white">Shape.shift</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-semibold tracking-tight text-white">Shape.shift</span>
+            <span className="text-xs text-white/30 tracking-wide">by Nayef</span>
+          </div>
           <div className="flex items-center gap-6">
             <Link href="/login" className="text-sm text-white/60 hover:text-white transition-colors duration-200">
               Sign in
