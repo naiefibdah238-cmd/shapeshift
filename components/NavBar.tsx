@@ -46,6 +46,12 @@ export default function NavBar() {
           >
             Planner
           </Link>
+          <Link
+            href="/nutrition"
+            className={`text-sm transition-colors ${pathname === '/nutrition' ? 'text-ink font-medium' : 'text-muted hover:text-ink'}`}
+          >
+            Nutrition
+          </Link>
 
           {!loading && (
             user ? (
