@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase-server'
 import NavBar from '@/components/NavBar'
 import Footer from '@/components/Footer'
+import DailyQuote from '@/components/DailyQuote'
 
 interface SavedPlan {
   id: string
@@ -38,6 +39,8 @@ export default async function DashboardPage() {
       <NavBar />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
+        <DailyQuote />
+
         <div className="flex items-end justify-between mb-10">
           <div>
             <h1 className="text-2xl font-semibold text-ink tracking-tight">My plans</h1>

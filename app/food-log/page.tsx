@@ -48,6 +48,7 @@ export default function FoodLogPage() {
   const [targets, setTargets] = useState<NutritionTarget>(DEFAULT_TARGETS)
   const [addMeal, setAddMeal] = useState<MealType | null>(null)
   const [showTargets, setShowTargets] = useState(false)
+  const [streak, setStreak] = useState(0)
   const supabase = createClient()
   const router = useRouter()
 
@@ -80,8 +81,31 @@ export default function FoodLogPage() {
     if (data) setTargets({ calories: data.calories, protein_g: data.protein_g, carbs_g: data.carbs_g, fat_g: data.fat_g })
   }, [user])
 
+  const loadStreak = useCallback(async () => {
+    if (!user) return
+    const { data } = await supabase
+      .from('food_log')
+      .select('logged_date')
+      .eq('user_id', user.id)
+      .order('logged_date', { ascending: false })
+    if (!data) return
+    const dates = [...new Set(data.map(e => e.logged_date))] as string[]
+    if (dates.length === 0) return
+    const today = formatDate(new Date())
+    const yesterday = formatDate(new Date(Date.now() - 86400000))
+    if (dates[0] !== today && dates[0] !== yesterday) { setStreak(0); return }
+    let s = 1
+    for (let i = 1; i < dates.length; i++) {
+      const prev = new Date(dates[i - 1])
+      const curr = new Date(dates[i])
+      if (Math.round((prev.getTime() - curr.getTime()) / 86400000) === 1) s++
+      else break
+    }
+    setStreak(s)
+  }, [user])
+
   useEffect(() => {
-    if (user) { loadEntries(); loadTargets() }
+    if (user) { loadEntries(); loadTargets(); loadStreak() }
   }, [user, date])
 
   async function handleAdd(entry: Omit<FoodEntry, 'id' | 'logged_date'>) {
@@ -132,7 +156,7 @@ export default function FoodLogPage() {
       </section>
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
-        {/* Date nav */}
+        {/* Date nav + streak */}
         <div className="flex items-center justify-between mb-8 animate-fade-up">
           <button
             onClick={() => setDate(d => new Date(d.getTime() - 86400000))}
@@ -140,7 +164,16 @@ export default function FoodLogPage() {
           >
             ← <span className="hidden sm:inline">Prev</span>
           </button>
-          <span className="text-sm font-semibold text-ink tracking-tight">{displayDate(date)}</span>
+
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-sm font-semibold text-ink tracking-tight">{displayDate(date)}</span>
+            {streak >= 2 && (
+              <span className="text-xs font-bold text-accent tracking-wide animate-fade-up">
+                🔥 {streak}-day streak
+              </span>
+            )}
+          </div>
+
           <button
             onClick={() => setDate(d => new Date(d.getTime() + 86400000))}
             disabled={formatDate(date) === formatDate(new Date())}
