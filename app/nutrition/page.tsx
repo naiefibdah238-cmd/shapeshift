@@ -5,6 +5,7 @@ import NavBar from '@/components/NavBar'
 import Footer from '@/components/Footer'
 import { calculateNutrition } from '@/lib/nutrition-logic'
 import type { NutritionInputs, NutritionResult, Sex, ActivityLevel, NutritionGoal } from '@/lib/nutrition-logic'
+import { useScrollReveal } from '@/hooks/useScrollReveal'
 
 type Units = 'metric' | 'imperial'
 
@@ -53,6 +54,7 @@ export default function NutritionPage() {
     units: 'metric',
   })
   const [result, setResult] = useState<NutritionResult | null>(null)
+  useScrollReveal([result])
 
   function set<K extends keyof NutritionInputs>(key: K, value: NutritionInputs[K]) {
     setInputs(prev => ({ ...prev, [key]: value }))
@@ -76,7 +78,7 @@ export default function NutritionPage() {
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
         {/* Header */}
-        <div className="mb-10">
+        <div className="mb-10 animate-fade-up">
           <h1 className="text-2xl font-semibold text-ink tracking-tight">Nutrition targets</h1>
           <p className="text-sm text-muted mt-1">
             TDEE, macro targets, and meal timing for hybrid athletes. Starting points — not prescriptions.
@@ -85,7 +87,7 @@ export default function NutritionPage() {
 
         <div className="max-w-2xl">
           {/* Units toggle */}
-          <div className="flex items-center gap-2 mb-8">
+          <div className="flex items-center gap-2 mb-8 animate-fade-up delay-100">
             <span className="text-xs text-muted uppercase tracking-widest font-medium">Units</span>
             <div className="flex border border-rule">
               {(['metric', 'imperial'] as Units[]).map(u => (
@@ -102,7 +104,7 @@ export default function NutritionPage() {
 
           <form onSubmit={handleCalculate} className="space-y-7">
             {/* Body stats */}
-            <div>
+            <div className="animate-fade-up delay-200">
               <span className="label">Body stats</span>
               <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -145,7 +147,7 @@ export default function NutritionPage() {
             </div>
 
             {/* Sex */}
-            <div>
+            <div className="animate-fade-up delay-300">
               <span className="label">Biological sex</span>
               <div className="grid grid-cols-2 gap-2">
                 {(['male', 'female'] as Sex[]).map(s => (
@@ -162,7 +164,7 @@ export default function NutritionPage() {
             </div>
 
             {/* Activity level */}
-            <div>
+            <div className="animate-fade-up delay-400">
               <span className="label">Activity level</span>
               <div className="grid grid-cols-1 gap-2">
                 {(Object.entries(ACTIVITY_LABELS) as [ActivityLevel, { label: string; sub: string }][]).map(([val, info]) => (
@@ -182,7 +184,7 @@ export default function NutritionPage() {
             </div>
 
             {/* Goal */}
-            <div>
+            <div className="animate-fade-up delay-500">
               <span className="label">Goal</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {(Object.entries(GOAL_LABELS) as [NutritionGoal, string][]).map(([val, label]) => (
@@ -198,7 +200,7 @@ export default function NutritionPage() {
               </div>
             </div>
 
-            <button type="submit" className="btn-primary text-sm px-8 py-4 w-full sm:w-auto">
+            <button type="submit" className="btn-primary text-sm px-8 py-4 w-full sm:w-auto animate-fade-up delay-600">
               Calculate targets
             </button>
           </form>
@@ -206,7 +208,7 @@ export default function NutritionPage() {
 
         {/* Results */}
         {result && (
-          <div id="nutrition-result" className="mt-16 pt-8 border-t border-rule">
+          <div id="nutrition-result" className="mt-16 pt-8 border-t border-rule animate-fade-up">
             <p className="text-2xs font-semibold tracking-widest uppercase text-accent mb-8">Your targets</p>
 
             {/* Calorie overview */}
@@ -215,8 +217,12 @@ export default function NutritionPage() {
                 { label: 'BMR', value: result.bmr.toLocaleString(), sub: 'Base metabolic rate' },
                 { label: 'TDEE', value: result.tdee.toLocaleString(), sub: 'Total daily expenditure' },
                 { label: 'Target', value: result.targets.calories.toLocaleString(), sub: `Adjusted for ${GOAL_LABELS[inputs.goal].toLowerCase()}` },
-              ].map(item => (
-                <div key={item.label} className="bg-white px-6 py-5">
+              ].map((item, i) => (
+                <div
+                  key={item.label}
+                  className="bg-white px-6 py-5 animate-fade-up"
+                  style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'both' }}
+                >
                   <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-1">{item.label}</p>
                   <p className="text-3xl font-bold text-ink tracking-tight">{item.value}</p>
                   <p className="text-2xs text-muted mt-1">{item.sub}</p>
@@ -226,7 +232,7 @@ export default function NutritionPage() {
 
             {/* Macros */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-              <div className="border border-rule bg-white p-6">
+              <div className="border border-rule bg-white p-6 reveal">
                 <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-5">Macro breakdown</p>
                 <div className="space-y-4">
                   <MacroBar label="Protein" grams={result.targets.proteinG} calories={result.targets.proteinCal} total={result.targets.calories} color="bg-ink" />
@@ -250,7 +256,7 @@ export default function NutritionPage() {
               </div>
 
               {/* Notes */}
-              <div className="border border-rule bg-white p-6">
+              <div className="border border-rule bg-white p-6 reveal" style={{ transitionDelay: '100ms' }}>
                 <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-5">Notes</p>
                 <div className="space-y-4">
                   {result.notes.map((note, i) => (
@@ -261,7 +267,7 @@ export default function NutritionPage() {
             </div>
 
             {/* Meal timing */}
-            <div>
+            <div className="reveal">
               <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-4">Meal timing</p>
               <div className="border border-rule divide-y divide-rule">
                 {result.mealTiming.map((meal, i) => (

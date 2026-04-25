@@ -113,14 +113,24 @@ export default function WeeklyGrid({ plan, onSwap, swappable = false }: Props) {
       {/* Desktop: 7-column grid */}
       <div className="hidden lg:grid lg:grid-cols-7 border-t border-l border-rule min-w-[900px]">
         {plan.days.map((day, i) => (
-          <DayCell key={i} day={day} onSwap={onSwap} swappable={swappable} />
+          <div
+            key={i}
+            className="animate-fade-up"
+            style={{ animationDelay: `${i * 55}ms`, animationFillMode: 'both' }}
+          >
+            <DayCell day={day} onSwap={onSwap} swappable={swappable} />
+          </div>
         ))}
       </div>
 
       {/* Mobile: stacked list */}
       <div className="lg:hidden divide-y divide-rule border border-rule">
         {plan.days.map((day, i) => (
-          <div key={i} className={`flex gap-0 ${SESSION_CLASS[day.sessionType]}`}>
+          <div
+            key={i}
+            className={`flex gap-0 animate-fade-up ${SESSION_CLASS[day.sessionType]}`}
+            style={{ animationDelay: `${i * 55}ms`, animationFillMode: 'both' }}
+          >
             {/* Left: day + badge */}
             <div className="w-20 flex-shrink-0 px-3 py-4 flex flex-col gap-1">
               <span className="text-xs font-semibold tracking-wide text-muted uppercase">

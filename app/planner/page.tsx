@@ -11,6 +11,7 @@ import { generatePlan, planToText } from '@/lib/programming-logic'
 import type { WeeklyPlan, PlannerInputs, DayPlan } from '@/lib/programming-logic'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
+import { useScrollReveal } from '@/hooks/useScrollReveal'
 
 export default function PlannerPage() {
   const [plan, setPlan] = useState<WeeklyPlan | null>(null)
@@ -22,6 +23,7 @@ export default function PlannerPage() {
   const [user, setUser] = useState<User | null>(null)
 
   const supabase = createClient()
+  useScrollReveal([plan])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -80,7 +82,7 @@ export default function PlannerPage() {
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
         {/* Page header */}
-        <div className="mb-10">
+        <div className="mb-10 animate-fade-up">
           <h1 className="text-2xl font-semibold text-ink tracking-tight">Weekly planner</h1>
           <p className="text-sm text-muted mt-1">
             Configure your training week. No account required — generate, then save if you want it persisted.
@@ -88,13 +90,13 @@ export default function PlannerPage() {
         </div>
 
         {/* Form */}
-        <div className="max-w-3xl">
+        <div className="max-w-3xl animate-fade-up delay-100">
           <PlannerForm onGenerate={handleGenerate} loading={loading} />
         </div>
 
         {/* Output */}
         {plan && (
-          <div id="plan-output" className="mt-16 pt-8 border-t border-rule">
+          <div key={seed} id="plan-output" className="mt-16 pt-8 border-t border-rule animate-fade-up">
             {/* Plan header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
               <div>
@@ -113,13 +115,13 @@ export default function PlannerPage() {
                   disabled={loading}
                   className="btn-secondary text-xs px-4 py-2 disabled:opacity-50"
                 >
-                  Regenerate
+                  {loading ? 'Rebuilding...' : 'Regenerate'}
                 </button>
                 <button
                   onClick={handleCopy}
                   className="btn-secondary text-xs px-4 py-2"
                 >
-                  {copied ? 'Copied' : 'Copy to clipboard'}
+                  {copied ? 'Copied ✓' : 'Copy to clipboard'}
                 </button>
                 <button
                   onClick={() => setShowSaveModal(true)}
@@ -134,7 +136,7 @@ export default function PlannerPage() {
             <WeeklyGrid plan={plan} />
 
             {/* Programming notes */}
-            <div className="mt-8 max-w-3xl">
+            <div className="mt-8 max-w-3xl reveal">
               <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-4">
                 Programming notes
               </p>
