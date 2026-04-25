@@ -4,6 +4,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scaleX(0); }
+  to   { opacity: 1; transform: scaleX(1); }
+}
+@keyframes pulse-accent {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(194, 65, 12, 0); }
+  50%       { box-shadow: 0 0 0 6px rgba(194, 65, 12, 0.15); }
+}
+
+.animate-fade-up   { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fade-in   { animation: fadeIn 0.5s ease both; }
+.animate-slide-right { animation: slideRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+.delay-600 { animation-delay: 0.6s; }
+.delay-700 { animation-delay: 0.7s; }
+.delay-800 { animation-delay: 0.8s; }
+
+/* Scroll reveal — hidden until JS adds .revealed */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -26,17 +72,31 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center px-6 py-3 bg-ink text-white text-sm font-medium tracking-wide transition-all duration-150;
+    @apply inline-flex items-center justify-center px-6 py-3 bg-ink text-white text-sm font-medium tracking-wide transition-all duration-200;
+    transform: translateY(0);
   }
   .btn-primary:hover {
     @apply bg-accent;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(194, 65, 12, 0.3);
+  }
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: none;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center px-6 py-3 border border-ink text-ink text-sm font-medium tracking-wide transition-all duration-150;
+    @apply inline-flex items-center justify-center px-6 py-3 border border-ink text-ink text-sm font-medium tracking-wide transition-all duration-200;
+    transform: translateY(0);
   }
   .btn-secondary:hover {
     @apply bg-ink text-white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(10, 10, 10, 0.15);
+  }
+  .btn-secondary:active {
+    transform: translateY(0);
+    box-shadow: none;
   }
 
   .btn-ghost {
