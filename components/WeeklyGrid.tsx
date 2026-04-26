@@ -48,10 +48,10 @@ function ExercisePanel({ sessionType, inputs }: { sessionType: SessionType; inpu
         onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
         className="w-full flex items-center justify-between px-3 py-2 hover:bg-cream transition-colors"
       >
-        <span className="text-2xs font-semibold tracking-widest uppercase text-muted">
+        <span className="text-2xs font-semibold tracking-widest uppercase text-accent">
           Full exercise list
         </span>
-        <span className="text-xs text-muted font-mono">{open ? '−' : '+'}</span>
+        <span className="text-xs text-accent font-mono">{open ? '−' : '+'}</span>
       </button>
 
       {open && (
