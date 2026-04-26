@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import type { MealType, FoodSearchResult } from '@/lib/food-log'
 import { MEAL_LABELS } from '@/lib/food-log'
 
@@ -54,22 +54,29 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
   const [gramsPerServing, setGramsPerServing] = useState(100)
   const [manual, setManual] = useState({ name: '', calories: '', protein: '', carbs: '', fat: '' })
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([])
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { setRecentFoods(loadRecent()) }, [])
 
   useEffect(() => {
     if (query.length < 2) { setResults([]); return }
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(async () => {
+
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
       setSearching(true)
       try {
-        const res = await fetch(`/api/food-search?q=${encodeURIComponent(query)}`)
+        const res = await fetch(`/api/food-search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
         const data = await res.json()
         setResults(data.results ?? [])
-      } catch { setResults([]) }
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') setResults([])
+      }
       setSearching(false)
     }, 400)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [query])
 
   function selectFood(food: FoodSearchResult) {
