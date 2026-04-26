@@ -23,13 +23,13 @@ export async function middleware(request: NextRequest) {
     },
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
 
   // Protect all feature routes — login/signup/auth stay public
   const protectedPaths = ['/dashboard', '/account', '/food-log', '/admin', '/planner', '/nutrition', '/plan']
   const isProtected = protectedPaths.some(p => request.nextUrl.pathname.startsWith(p))
 
-  if (isProtected && !user) {
+  if (isProtected && !session) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('next', request.nextUrl.pathname)

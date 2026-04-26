@@ -28,8 +28,7 @@ function LoginForm() {
       return
     }
 
-    router.push(next)
-    router.refresh()
+    window.location.href = next
   }
 
   return (
