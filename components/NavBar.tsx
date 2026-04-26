@@ -15,6 +15,7 @@ const NAV_LINKS = [
 export default function NavBar() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
@@ -24,9 +25,16 @@ export default function NavBar() {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
       setLoading(false)
+      if (data.user) {
+        fetch('/api/admin/check')
+          .then(r => r.json())
+          .then(d => setIsAdmin(d.isAdmin ?? false))
+          .catch(() => {})
+      }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      if (!session?.user) setIsAdmin(false)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -45,6 +53,7 @@ export default function NavBar() {
     ...(user ? [
       { href: '/dashboard', label: 'My Plans' },
       { href: '/account',   label: 'Account' },
+      ...(isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
     ] : []),
   ]
 
@@ -77,6 +86,11 @@ export default function NavBar() {
                   <Link href="/account" className={`text-sm transition-colors ${pathname === '/account' ? 'text-ink font-medium' : 'text-muted hover:text-ink'}`}>
                     Account
                   </Link>
+                  {isAdmin && (
+                    <Link href="/admin" className={`text-sm transition-colors ${pathname === '/admin' ? 'text-ink font-medium' : 'text-muted hover:text-ink'}`}>
+                      Admin
+                    </Link>
+                  )}
                   <button onClick={handleSignOut} className="text-sm text-muted hover:text-ink transition-colors">
                     Sign out
                   </button>
