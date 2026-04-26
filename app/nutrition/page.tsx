@@ -118,7 +118,7 @@ export default function NutritionPage() {
                   <label className="text-2xs text-muted uppercase tracking-wider block mb-1.5">{weightLabel}</label>
                   <input
                     type="number"
-                    value={inputs.weightKg}
+                    value={inputs.weightKg || ''}
                     onChange={e => set('weightKg', parseFloat(e.target.value) || 0)}
                     className="input-field"
                     min={30}
@@ -130,7 +130,7 @@ export default function NutritionPage() {
                   <label className="text-2xs text-muted uppercase tracking-wider block mb-1.5">{heightLabel}</label>
                   <input
                     type="number"
-                    value={inputs.heightCm}
+                    value={inputs.heightCm || ''}
                     onChange={e => set('heightCm', parseFloat(e.target.value) || 0)}
                     className="input-field"
                     min={100}
@@ -142,7 +142,7 @@ export default function NutritionPage() {
                   <label className="text-2xs text-muted uppercase tracking-wider block mb-1.5">Age</label>
                   <input
                     type="number"
-                    value={inputs.age}
+                    value={inputs.age || ''}
                     onChange={e => set('age', parseInt(e.target.value) || 0)}
                     className="input-field"
                     min={16}

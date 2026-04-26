@@ -685,6 +685,339 @@ export function getValidSwapsForDay(plan: WeeklyPlan, dayIndex: number): DayPlan
 }
 
 // ---------------------------------------------------------------------------
+// Exercise recommendations
+// ---------------------------------------------------------------------------
+
+export interface ExerciseItem {
+  name: string
+  sets: string
+  reps: string
+  note?: string
+}
+
+const LIFTING_EXERCISES: Partial<Record<SessionType, Record<LiftingStyle, ExerciseItem[]>>> = {
+  lower_strength: {
+    strength: [
+      { name: 'Back Squat',            sets: '4', reps: '3-5',    note: 'Hit depth — 85%+' },
+      { name: 'Conventional Deadlift', sets: '3', reps: '3-5',    note: '85%+' },
+      { name: 'Leg Press',             sets: '3', reps: '8' },
+      { name: 'Hamstring Curl',        sets: '3', reps: '8-10' },
+      { name: 'Standing Calf Raise',   sets: '3', reps: '15' },
+    ],
+    powerbuilding: [
+      { name: 'Back Squat',            sets: '4', reps: '3-5',   note: '85%+' },
+      { name: 'Conventional Deadlift', sets: '3', reps: '3',     note: 'Heavy triple' },
+      { name: 'Romanian Deadlift',     sets: '3', reps: '8' },
+      { name: 'Leg Curl',              sets: '3', reps: '10' },
+      { name: 'Calf Raise',            sets: '3', reps: '12' },
+    ],
+    bodybuilding: [
+      { name: 'Squat',                 sets: '4', reps: '6-8',   note: 'Controlled tempo' },
+      { name: 'Romanian Deadlift',     sets: '3', reps: '10' },
+      { name: 'Leg Press',             sets: '4', reps: '12' },
+      { name: 'Leg Extension',         sets: '3', reps: '15' },
+      { name: 'Lying Leg Curl',        sets: '3', reps: '12' },
+      { name: 'Standing Calf Raise',   sets: '4', reps: '15' },
+    ],
+    functional: [
+      { name: 'Back Squat',            sets: '4', reps: '4-6' },
+      { name: 'Single-leg RDL',        sets: '3', reps: '8 / leg' },
+      { name: 'KB Step-up',            sets: '3', reps: '10 / leg' },
+      { name: 'KB Swing',              sets: '4', reps: '15' },
+      { name: 'Sled Push',             sets: '3', reps: '20 m' },
+    ],
+  },
+  upper_strength: {
+    strength: [
+      { name: 'Bench Press',           sets: '4', reps: '3-5',   note: '85%+' },
+      { name: 'Barbell Row',           sets: '4', reps: '4-6' },
+      { name: 'Overhead Press',        sets: '3', reps: '5' },
+      { name: 'Weighted Pull-up',      sets: '3', reps: '4-6' },
+      { name: 'Weighted Dip',          sets: '3', reps: '6-8' },
+    ],
+    powerbuilding: [
+      { name: 'Bench Press',           sets: '4', reps: '4-6',   note: '80-85%' },
+      { name: 'Barbell Row',           sets: '4', reps: '5' },
+      { name: 'Overhead Press',        sets: '3', reps: '5-6' },
+      { name: 'Weighted Pull-up',      sets: '3', reps: '5' },
+      { name: 'Dips',                  sets: '3', reps: '6-8' },
+    ],
+    bodybuilding: [
+      { name: 'Incline DB Press',      sets: '4', reps: '8-10' },
+      { name: 'Cable Row',             sets: '4', reps: '10-12' },
+      { name: 'DB Shoulder Press',     sets: '3', reps: '10' },
+      { name: 'Lat Pulldown',          sets: '3', reps: '12' },
+      { name: 'Lateral Raise',         sets: '3', reps: '15' },
+      { name: 'Overhead Tricep Ext.',  sets: '3', reps: '12' },
+    ],
+    functional: [
+      { name: 'Push Press',            sets: '4', reps: '4-6' },
+      { name: 'Pendlay Row',           sets: '4', reps: '5' },
+      { name: 'Turkish Get-up',        sets: '3', reps: '3 / side' },
+      { name: 'Ring Dip',              sets: '3', reps: '8' },
+      { name: 'TRX Row',               sets: '3', reps: '10' },
+    ],
+  },
+  lower_hypertrophy: {
+    strength: [
+      { name: 'Front Squat',           sets: '3', reps: '6-8' },
+      { name: 'Romanian Deadlift',     sets: '3', reps: '8-10' },
+      { name: 'Leg Press',             sets: '3', reps: '12' },
+      { name: 'Nordic Curl',           sets: '3', reps: '8',    note: '4-sec eccentric' },
+      { name: 'Calf Raise',            sets: '4', reps: '15' },
+    ],
+    powerbuilding: [
+      { name: 'Back Squat',            sets: '4', reps: '8-10' },
+      { name: 'Romanian Deadlift',     sets: '3', reps: '10' },
+      { name: 'Leg Press',             sets: '3', reps: '12' },
+      { name: 'Leg Extension',         sets: '3', reps: '15' },
+      { name: 'Lying Leg Curl',        sets: '3', reps: '12' },
+      { name: 'Calf Raise',            sets: '3', reps: '15' },
+    ],
+    bodybuilding: [
+      { name: 'Squat',                 sets: '4', reps: '10-12' },
+      { name: 'Romanian Deadlift',     sets: '4', reps: '12' },
+      { name: 'Leg Press',             sets: '4', reps: '15' },
+      { name: 'Leg Extension',         sets: '4', reps: '15-20', note: 'Squeeze at top' },
+      { name: 'Lying Leg Curl',        sets: '4', reps: '12-15' },
+      { name: 'Seated Calf Raise',     sets: '4', reps: '20' },
+    ],
+    functional: [
+      { name: 'Goblet Squat',          sets: '4', reps: '10' },
+      { name: 'Bulgarian Split Squat', sets: '3', reps: '10 / leg' },
+      { name: 'KB Swing',              sets: '4', reps: '15' },
+      { name: 'Box Jump',              sets: '3', reps: '5',    note: 'Full reset each rep' },
+      { name: 'Single-leg Hip Thrust', sets: '3', reps: '12 / leg' },
+    ],
+  },
+  upper_hypertrophy: {
+    strength: [
+      { name: 'Close-grip Bench Press', sets: '3', reps: '6-8' },
+      { name: 'Dumbbell Row',           sets: '3', reps: '10-12' },
+      { name: 'Arnold Press',           sets: '3', reps: '10' },
+      { name: 'EZ Bar Curl',            sets: '3', reps: '12' },
+      { name: 'Tricep Pushdown',        sets: '3', reps: '12' },
+    ],
+    powerbuilding: [
+      { name: 'Incline Bench Press',    sets: '4', reps: '8-10' },
+      { name: 'Pendlay Row',            sets: '3', reps: '8-10' },
+      { name: 'DB Shoulder Press',      sets: '3', reps: '10' },
+      { name: 'Lat Pulldown',           sets: '3', reps: '12' },
+      { name: 'Tricep Pushdown',        sets: '3', reps: '15' },
+      { name: 'Cable Curl',             sets: '3', reps: '12' },
+    ],
+    bodybuilding: [
+      { name: 'Incline DB Press',       sets: '4', reps: '10-12' },
+      { name: 'Seated Cable Row',       sets: '4', reps: '12' },
+      { name: 'Lateral Raise',          sets: '4', reps: '15',   note: 'Slight forward lean' },
+      { name: 'Cable Curl',             sets: '4', reps: '15' },
+      { name: 'Overhead Tricep Ext.',   sets: '4', reps: '12' },
+      { name: 'Face Pull',              sets: '3', reps: '15',   note: 'Pull to forehead' },
+    ],
+    functional: [
+      { name: 'Ring Push-up',           sets: '4', reps: '10' },
+      { name: 'TRX Row',                sets: '4', reps: '12' },
+      { name: 'KB Clean & Press',       sets: '3', reps: '8 / side' },
+      { name: 'Band Pull-apart',        sets: '3', reps: '20' },
+      { name: 'Pike Press',             sets: '3', reps: '8' },
+    ],
+  },
+  full_body_strength: {
+    strength: [
+      { name: 'Deadlift',              sets: '4', reps: '3-5',   note: '85%+' },
+      { name: 'Bench Press',           sets: '3', reps: '5' },
+      { name: 'Barbell Row',           sets: '3', reps: '5' },
+      { name: 'Overhead Press',        sets: '3', reps: '5' },
+      { name: 'Weighted Pull-up',      sets: '3', reps: '5' },
+    ],
+    powerbuilding: [
+      { name: 'Deadlift',              sets: '4', reps: '4-6' },
+      { name: 'Bench Press',           sets: '3', reps: '5' },
+      { name: 'Back Squat',            sets: '3', reps: '5' },
+      { name: 'Barbell Row',           sets: '3', reps: '6' },
+      { name: 'Overhead Press',        sets: '3', reps: '6' },
+    ],
+    bodybuilding: [
+      { name: 'Deadlift',              sets: '3', reps: '6-8' },
+      { name: 'Bench Press',           sets: '3', reps: '8' },
+      { name: 'Pull-up',               sets: '3', reps: '8-10' },
+      { name: 'Overhead Press',        sets: '3', reps: '8' },
+      { name: 'Romanian Deadlift',     sets: '3', reps: '10' },
+    ],
+    functional: [
+      { name: 'Clean & Press',         sets: '4', reps: '4' },
+      { name: 'Deadlift',              sets: '3', reps: '5' },
+      { name: 'Ring Dip',              sets: '3', reps: '8' },
+      { name: 'Pull-up',               sets: '3', reps: '8' },
+      { name: "Farmer's Carry",        sets: '3', reps: '40 m' },
+    ],
+  },
+  full_body_accessory: {
+    strength: [
+      { name: 'Nordic Curl',           sets: '3', reps: '8',    note: 'Slow eccentric' },
+      { name: 'Face Pull',             sets: '3', reps: '15' },
+      { name: 'Single-leg Hip Thrust', sets: '3', reps: '12 / leg' },
+      { name: 'Pallof Press',          sets: '3', reps: '12 / side' },
+      { name: 'Band Pull-apart',       sets: '3', reps: '20' },
+    ],
+    powerbuilding: [
+      { name: 'GHR / Nordic Curl',     sets: '3', reps: '8' },
+      { name: 'Face Pull',             sets: '3', reps: '15' },
+      { name: 'Hip Thrust',            sets: '3', reps: '12' },
+      { name: 'Lateral Raise',         sets: '3', reps: '15' },
+      { name: 'Bicep Curl',            sets: '3', reps: '12' },
+      { name: 'Tricep Pushdown',       sets: '3', reps: '15' },
+    ],
+    bodybuilding: [
+      { name: 'Cable Curl',            sets: '3', reps: '15' },
+      { name: 'Overhead Tricep Ext.',  sets: '3', reps: '15' },
+      { name: 'Lateral Raise',         sets: '4', reps: '15' },
+      { name: 'Rear Delt Fly',         sets: '3', reps: '15' },
+      { name: 'Leg Extension',         sets: '3', reps: '20' },
+      { name: 'Leg Curl',              sets: '3', reps: '15' },
+    ],
+    functional: [
+      { name: 'KB Swing',              sets: '4', reps: '20' },
+      { name: 'Battle Rope',           sets: '4', reps: '30 sec' },
+      { name: 'Sled Push/Pull',        sets: '3', reps: '20 m' },
+      { name: 'Bear Crawl',            sets: '3', reps: '20 m' },
+      { name: 'Band Pull-apart',       sets: '3', reps: '20' },
+    ],
+  },
+}
+
+const ENDURANCE_EXERCISES: Partial<Record<SessionType, Record<EnduranceFocus, ExerciseItem[]>>> = {
+  long_endurance: {
+    running: [
+      { name: 'Warm-up walk/jog',   sets: '1', reps: '5-10 min' },
+      { name: 'Easy Z2 run',        sets: '1', reps: '60-90 min', note: 'Conversational pace — HR 60-70%' },
+      { name: 'Cool-down walk',     sets: '1', reps: '5 min' },
+    ],
+    cycling: [
+      { name: 'Easy spin warm-up',  sets: '1', reps: '10 min' },
+      { name: 'Steady Z2 ride',     sets: '1', reps: '75-100 min', note: '60-70% FTP — aerobic base' },
+      { name: 'Cool-down spin',     sets: '1', reps: '5 min' },
+    ],
+    rowing: [
+      { name: 'Warm-up row',        sets: '1', reps: '5 min easy' },
+      { name: 'Steady-state erg',   sets: '1', reps: '45-60 min', note: 'Comfortable split — damper 4-5' },
+      { name: 'Cool-down',          sets: '1', reps: '5 min easy' },
+    ],
+    mixed: [
+      { name: 'Warm-up',            sets: '1', reps: '10 min easy' },
+      { name: 'Long aerobic effort', sets: '1', reps: '60-90 min', note: 'Any modality — HR 60-70%' },
+      { name: 'Cool-down',          sets: '1', reps: '5-10 min' },
+    ],
+  },
+  zone2_medium: {
+    running: [
+      { name: 'Warm-up jog',        sets: '1', reps: '5 min' },
+      { name: 'Zone 2 run',         sets: '1', reps: '35-45 min', note: 'Should hold a full conversation' },
+      { name: 'Cool-down walk',     sets: '1', reps: '5 min' },
+    ],
+    cycling: [
+      { name: 'Easy spin',          sets: '1', reps: '5 min' },
+      { name: 'Zone 2 ride',        sets: '1', reps: '40-50 min', note: '55-65% FTP' },
+      { name: 'Cool-down spin',     sets: '1', reps: '5 min' },
+    ],
+    rowing: [
+      { name: 'Warm-up',            sets: '1', reps: '3 min easy' },
+      { name: 'Zone 2 row',         sets: '1', reps: '30-40 min', note: 'Comfortable sustainable pace' },
+      { name: 'Cool-down',          sets: '1', reps: '3 min easy' },
+    ],
+    mixed: [
+      { name: 'Warm-up',            sets: '1', reps: '5 min' },
+      { name: 'Zone 2 session',     sets: '1', reps: '35-45 min', note: 'HR 60-70% max throughout' },
+      { name: 'Cool-down',          sets: '1', reps: '5 min' },
+    ],
+  },
+  zone2_short: {
+    running: [
+      { name: 'Walk/jog',           sets: '1', reps: '5 min' },
+      { name: 'Easy recovery run',  sets: '1', reps: '20-25 min', note: 'Go slower than feels necessary' },
+      { name: 'Cool-down walk',     sets: '1', reps: '5 min' },
+    ],
+    cycling: [
+      { name: 'Easy spin',          sets: '1', reps: '5 min' },
+      { name: 'Recovery ride',      sets: '1', reps: '20-30 min', note: 'Very easy — under 55% FTP' },
+      { name: 'Cool-down',          sets: '1', reps: '5 min' },
+    ],
+    rowing: [
+      { name: 'Warm-up',            sets: '1', reps: '3 min' },
+      { name: 'Easy row',           sets: '1', reps: '15-20 min', note: 'Low rate — technique focus' },
+      { name: 'Cool-down',          sets: '1', reps: '3 min' },
+    ],
+    mixed: [
+      { name: 'Warm-up',            sets: '1', reps: '5 min' },
+      { name: 'Easy aerobic work',  sets: '1', reps: '20-25 min', note: 'Pure recovery — keep HR low' },
+      { name: 'Cool-down',          sets: '1', reps: '5 min' },
+    ],
+  },
+  tempo: {
+    running: [
+      { name: 'Warm-up jog',        sets: '1', reps: '10-15 min' },
+      { name: 'Threshold run',      sets: '1', reps: '20-25 min', note: '~80-85% HR — comfortably hard' },
+      { name: 'Cool-down jog',      sets: '1', reps: '10 min' },
+    ],
+    cycling: [
+      { name: 'Warm-up spin',       sets: '1', reps: '10 min' },
+      { name: 'Tempo ride',         sets: '1', reps: '20-25 min', note: '76-90% FTP — sustainable but hard' },
+      { name: 'Cool-down spin',     sets: '1', reps: '10 min' },
+    ],
+    rowing: [
+      { name: 'Warm-up',            sets: '1', reps: '8 min easy' },
+      { name: 'Threshold row',      sets: '1', reps: '16-20 min', note: 'Hard but controlled split' },
+      { name: 'Cool-down',          sets: '1', reps: '8 min easy' },
+    ],
+    mixed: [
+      { name: 'Warm-up',            sets: '1', reps: '10-15 min' },
+      { name: 'Threshold effort',   sets: '1', reps: '20-25 min', note: '80-85% HR — hard to speak in full sentences' },
+      { name: 'Cool-down',          sets: '1', reps: '10 min' },
+    ],
+  },
+  intervals: {
+    running: [
+      { name: 'Warm-up jog',        sets: '1', reps: '15 min' },
+      { name: '800 m intervals',    sets: '5-8', reps: '800 m @ 5K pace', note: '2 min easy jog rest between' },
+      { name: 'Cool-down jog',      sets: '1', reps: '10 min' },
+    ],
+    cycling: [
+      { name: 'Warm-up spin',       sets: '1', reps: '10 min' },
+      { name: 'VO2max intervals',   sets: '5-6', reps: '3 min @ 105-120% FTP', note: '3 min easy rest between' },
+      { name: 'Cool-down spin',     sets: '1', reps: '10 min' },
+    ],
+    rowing: [
+      { name: 'Warm-up row',        sets: '1', reps: '10 min easy' },
+      { name: 'Power intervals',    sets: '6-8', reps: '250 m all-out', note: '2 min full rest between' },
+      { name: 'Cool-down',          sets: '1', reps: '8 min easy' },
+    ],
+    mixed: [
+      { name: 'Warm-up',            sets: '1', reps: '10-15 min' },
+      { name: 'Hard intervals',     sets: '5-8', reps: '2-3 min hard', note: '90-95% HR — full rest between' },
+      { name: 'Cool-down',          sets: '1', reps: '10 min' },
+    ],
+  },
+}
+
+const MOBILITY_EXERCISES: ExerciseItem[] = [
+  { name: 'Cat-cow',               sets: '2', reps: '10 reps',      note: 'Slow and deliberate' },
+  { name: 'Hip 90/90 stretch',     sets: '2', reps: '60 sec / side' },
+  { name: 'Thoracic rotation',     sets: '2', reps: '10 reps / side' },
+  { name: 'Couch stretch',         sets: '2', reps: '60 sec / side', note: 'Press hip forward gently' },
+  { name: 'Downward dog flow',     sets: '2', reps: '10 slow reps' },
+  { name: 'Thread the needle',     sets: '2', reps: '45 sec / side' },
+]
+
+export function getSessionExercises(sessionType: SessionType, inputs: PlannerInputs): ExerciseItem[] {
+  if (sessionType === 'rest') return []
+  if (sessionType === 'mobility') return MOBILITY_EXERCISES
+  if (SESSION_PROPS[sessionType].isEnduranceSession) {
+    return ENDURANCE_EXERCISES[sessionType]?.[inputs.enduranceFocus] ?? []
+  }
+  return LIFTING_EXERCISES[sessionType]?.[inputs.liftingStyle] ?? []
+}
+
+// ---------------------------------------------------------------------------
 // Utility: export plan to plain text
 // ---------------------------------------------------------------------------
 

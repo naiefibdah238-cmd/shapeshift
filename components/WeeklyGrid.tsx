@@ -1,6 +1,8 @@
 'use client'
 
-import type { DayPlan, SessionType, WeeklyPlan } from '@/lib/programming-logic'
+import { useState } from 'react'
+import type { DayPlan, PlannerInputs, SessionType, WeeklyPlan } from '@/lib/programming-logic'
+import { getSessionExercises } from '@/lib/programming-logic'
 
 const SESSION_CLASS: Record<SessionType, string> = {
   lower_strength:     'session-lower-strength',
@@ -34,12 +36,54 @@ const SESSION_BADGE: Record<SessionType, string> = {
   rest:               'REST',
 }
 
+function ExercisePanel({ sessionType, inputs }: { sessionType: SessionType; inputs: PlannerInputs }) {
+  const [open, setOpen] = useState(false)
+  const exercises = getSessionExercises(sessionType, inputs)
+  if (exercises.length === 0) return null
+
+  return (
+    <div className="border-t border-rule">
+      <button
+        type="button"
+        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+        className="w-full flex items-center justify-between px-3 py-2 hover:bg-cream transition-colors"
+      >
+        <span className="text-2xs font-semibold tracking-widest uppercase text-muted">
+          Full exercise list
+        </span>
+        <span className="text-xs text-muted font-mono">{open ? '−' : '+'}</span>
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 space-y-1">
+          {exercises.map((ex, i) => {
+            const detail = ex.sets === '1' ? ex.reps : `${ex.sets} × ${ex.reps}`
+            return (
+              <div key={i} className="flex items-start gap-2 py-1 border-t border-rule/40 first:border-t-0">
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-medium text-ink">{ex.name}</span>
+                  {ex.note && (
+                    <span className="block text-2xs text-muted/70 mt-0.5">{ex.note}</span>
+                  )}
+                </div>
+                <span className="text-xs text-muted font-mono shrink-0">{detail}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function DayCell({
   day,
+  inputs,
   onSwap,
   swappable = false,
 }: {
   day: DayPlan
+  inputs: PlannerInputs
   onSwap?: (dayIndex: number) => void
   swappable?: boolean
 }) {
@@ -89,6 +133,9 @@ function DayCell({
         )}
       </div>
 
+      {/* Exercise panel */}
+      {!isRest && <ExercisePanel sessionType={day.sessionType} inputs={inputs} />}
+
       {/* Swap hint for interactive mode */}
       {swappable && !isRest && (
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -118,7 +165,7 @@ export default function WeeklyGrid({ plan, onSwap, swappable = false }: Props) {
             className="animate-fade-up"
             style={{ animationDelay: `${i * 55}ms`, animationFillMode: 'both' }}
           >
-            <DayCell day={day} onSwap={onSwap} swappable={swappable} />
+            <DayCell day={day} inputs={plan.inputs} onSwap={onSwap} swappable={swappable} />
           </div>
         ))}
       </div>
@@ -128,34 +175,44 @@ export default function WeeklyGrid({ plan, onSwap, swappable = false }: Props) {
         {plan.days.map((day, i) => (
           <div
             key={i}
-            className={`flex gap-0 animate-fade-up ${SESSION_CLASS[day.sessionType]}`}
+            className={`animate-fade-up ${SESSION_CLASS[day.sessionType]}`}
             style={{ animationDelay: `${i * 55}ms`, animationFillMode: 'both' }}
           >
-            {/* Left: day + badge */}
-            <div className="w-20 flex-shrink-0 px-3 py-4 flex flex-col gap-1">
-              <span className="text-xs font-semibold tracking-wide text-muted uppercase">
-                {day.day.slice(0, 3)}
-              </span>
-              <span className="text-2xs text-muted/60 uppercase tracking-wider leading-tight">
-                {SESSION_BADGE[day.sessionType]}
-              </span>
+            {/* Main row */}
+            <div className="flex gap-0">
+              {/* Left: day + badge */}
+              <div className="w-20 flex-shrink-0 px-3 py-4 flex flex-col gap-1">
+                <span className="text-xs font-semibold tracking-wide text-muted uppercase">
+                  {day.day.slice(0, 3)}
+                </span>
+                <span className="text-2xs text-muted/60 uppercase tracking-wider leading-tight">
+                  {SESSION_BADGE[day.sessionType]}
+                </span>
+              </div>
+
+              {/* Right: session info */}
+              <div
+                className={`flex-1 px-3 py-4 border-l border-rule bg-white ${swappable && day.sessionType !== 'rest' ? 'cursor-pointer active:bg-cream' : ''}`}
+                onClick={swappable && day.sessionType !== 'rest' ? () => onSwap?.(i) : undefined}
+              >
+                <p className={`text-sm font-medium leading-snug ${day.sessionType === 'rest' ? 'text-muted' : 'text-ink'}`}>
+                  {day.sessionName}
+                </p>
+                {day.sessionType !== 'rest' && (
+                  <>
+                    <p className="text-2xs font-mono text-muted mt-1">{day.estimatedDuration}</p>
+                    <p className="text-2xs text-muted/80 mt-2 leading-relaxed">{day.rationale}</p>
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Right: session info */}
-            <div
-              className={`flex-1 px-3 py-4 border-l border-rule bg-white ${swappable && day.sessionType !== 'rest' ? 'cursor-pointer active:bg-cream' : ''}`}
-              onClick={swappable && day.sessionType !== 'rest' ? () => onSwap?.(i) : undefined}
-            >
-              <p className={`text-sm font-medium leading-snug ${day.sessionType === 'rest' ? 'text-muted' : 'text-ink'}`}>
-                {day.sessionName}
-              </p>
-              {day.sessionType !== 'rest' && (
-                <>
-                  <p className="text-2xs font-mono text-muted mt-1">{day.estimatedDuration}</p>
-                  <p className="text-2xs text-muted/80 mt-2 leading-relaxed">{day.rationale}</p>
-                </>
-              )}
-            </div>
+            {/* Exercise panel */}
+            {day.sessionType !== 'rest' && (
+              <div className="border-t border-rule bg-white">
+                <ExercisePanel sessionType={day.sessionType} inputs={plan.inputs} />
+              </div>
+            )}
           </div>
         ))}
       </div>
