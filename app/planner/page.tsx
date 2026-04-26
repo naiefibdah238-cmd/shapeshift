@@ -90,7 +90,7 @@ export default function PlannerPage() {
         <div className="relative z-10 max-w-6xl mx-auto w-full px-6 pb-8 animate-fade-up">
           <p className="text-2xs font-bold tracking-widest uppercase text-accent mb-2">Hybrid training planner</p>
           <h1 className="text-3xl lg:text-4xl font-bold text-white tracking-tight">Build your week.</h1>
-          <p className="text-sm text-white/60 mt-1">No account required — generate, then save if you want it persisted.</p>
+          <p className="text-sm text-white/60 mt-1">Build and save your training week. Free, always.</p>
         </div>
       </section>
 
