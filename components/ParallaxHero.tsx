@@ -16,6 +16,7 @@ export default function ParallaxHero({ imageUrl, children, className = 'h-52 lg:
     const parent = el.parentElement!
 
     function update() {
+      if (!el) return
       const rect = parent.getBoundingClientRect()
       if (rect.bottom < 0 || rect.top > window.innerHeight) return
       const progress = rect.top / window.innerHeight
