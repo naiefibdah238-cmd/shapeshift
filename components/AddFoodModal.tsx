@@ -54,23 +54,27 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
   const [gramsPerServing, setGramsPerServing] = useState(100)
   const [manual, setManual] = useState({ name: '', calories: '', protein: '', carbs: '', fat: '' })
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([])
+  const [searchError, setSearchError] = useState<string | null>(null)
 
   useEffect(() => { setRecentFoods(loadRecent()) }, [])
 
   useEffect(() => {
-    if (query.length < 2) { setResults([]); setSearching(false); return }
+    if (query.length < 2) { setResults([]); setSearching(false); setSearchError(null); return }
 
     const controller = new AbortController()
     const timer = setTimeout(async () => {
       setSearching(true)
+      setSearchError(null)
       try {
         const res = await fetch(`/api/food-search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
         const data = await res.json()
+        if (data.error) setSearchError('Food search is unavailable right now. Try manual entry.')
         setResults(data.results ?? [])
         setSearching(false)
       } catch (err) {
         if (err instanceof Error && err.name !== 'AbortError') {
           setResults([])
+          setSearchError('Food search is unavailable right now. Try manual entry.')
           setSearching(false)
         }
       }
@@ -208,7 +212,11 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
                 </div>
               )}
 
-              {!selected && !searching && query.length >= 2 && results.length === 0 && (
+              {searchError && (
+                <p className="text-xs text-red-600">{searchError}</p>
+              )}
+
+              {!searchError && !selected && !searching && query.length >= 2 && results.length === 0 && (
                 <p className="text-xs text-muted">No results. Try a different name or use manual entry.</p>
               )}
 

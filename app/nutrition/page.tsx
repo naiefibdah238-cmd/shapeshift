@@ -3,9 +3,12 @@
 import { useState } from 'react'
 import NavBar from '@/components/NavBar'
 import Footer from '@/components/Footer'
+import Toast from '@/components/Toast'
 import { calculateNutrition } from '@/lib/nutrition-logic'
 import type { NutritionInputs, NutritionResult, Sex, ActivityLevel, NutritionGoal } from '@/lib/nutrition-logic'
 import { useScrollReveal } from '@/hooks/useScrollReveal'
+import { useToast } from '@/hooks/useToast'
+import { createClient } from '@/lib/supabase'
 
 type Units = 'metric' | 'imperial'
 
@@ -54,7 +57,28 @@ export default function NutritionPage() {
     units: 'metric',
   })
   const [result, setResult] = useState<NutritionResult | null>(null)
+  const [savingTargets, setSavingTargets] = useState(false)
+  const { toast, showToast } = useToast()
+  const supabase = createClient()
   useScrollReveal([result])
+
+  async function handleSaveToFoodLog() {
+    if (!result) return
+    setSavingTargets(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { showToast('Sign in to save targets', 'error'); setSavingTargets(false); return }
+    const { error } = await supabase.from('nutrition_targets').upsert({
+      user_id: user.id,
+      calories: result.targets.calories,
+      protein_g: result.targets.proteinG,
+      carbs_g: result.targets.carbsG,
+      fat_g: result.targets.fatG,
+      updated_at: new Date().toISOString(),
+    })
+    setSavingTargets(false)
+    if (error) { showToast('Failed to save targets. Try again.', 'error'); return }
+    showToast('Targets saved to your food log')
+  }
 
   function set<K extends keyof NutritionInputs>(key: K, value: NutritionInputs[K]) {
     setInputs(prev => ({ ...prev, [key]: value }))
@@ -86,7 +110,7 @@ export default function NutritionPage() {
         <div className="relative z-10 max-w-6xl mx-auto w-full px-6 pb-8 animate-fade-up">
           <p className="text-2xs font-bold tracking-widest uppercase text-accent mb-2">Nutrition calculator</p>
           <h1 className="text-3xl lg:text-4xl font-bold text-white tracking-tight">Fuel your training.</h1>
-          <p className="text-sm text-white/60 mt-1">TDEE, macros, and meal timing for hybrid athletes. Starting points — not prescriptions.</p>
+          <p className="text-sm text-white/60 mt-1">How many calories to eat, what to eat, and when — for hybrid athletes. Starting points, not rules.</p>
         </div>
       </section>
 
@@ -221,9 +245,9 @@ export default function NutritionPage() {
             {/* Calorie overview */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-rule border border-rule mb-8">
               {[
-                { label: 'BMR', value: result.bmr.toLocaleString(), sub: 'Base metabolic rate' },
-                { label: 'TDEE', value: result.tdee.toLocaleString(), sub: 'Total daily expenditure' },
-                { label: 'Target', value: result.targets.calories.toLocaleString(), sub: `Adjusted for ${GOAL_LABELS[inputs.goal].toLowerCase()}` },
+                { label: 'Resting calories', value: result.bmr.toLocaleString(), sub: 'What your body burns just to stay alive' },
+                { label: 'You burn daily', value: result.tdee.toLocaleString(), sub: 'With your current activity level' },
+                { label: 'Your daily target', value: result.targets.calories.toLocaleString(), sub: `Calories to eat to ${GOAL_LABELS[inputs.goal].toLowerCase()}` },
               ].map((item, i) => (
                 <div
                   key={item.label}
@@ -273,6 +297,18 @@ export default function NutritionPage() {
               </div>
             </div>
 
+            {/* Save to food log */}
+            <div className="reveal mb-10">
+              <button
+                onClick={handleSaveToFoodLog}
+                disabled={savingTargets}
+                className="btn-primary text-sm px-6 py-3 disabled:opacity-50"
+              >
+                {savingTargets ? 'Saving...' : 'Use these as my food log targets'}
+              </button>
+              <p className="text-2xs text-muted mt-2">This will update the daily targets shown in your food log.</p>
+            </div>
+
             {/* Meal timing */}
             <div className="reveal">
               <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-4">Meal timing</p>
@@ -295,6 +331,7 @@ export default function NutritionPage() {
       </main>
 
       <Footer />
+      {toast && <Toast message={toast.message} type={toast.type} />}
     </div>
   )
 }

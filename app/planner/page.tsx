@@ -7,11 +7,13 @@ import PlannerForm from '@/components/PlannerForm'
 import WeeklyGrid from '@/components/WeeklyGrid'
 import SessionSwapModal from '@/components/SessionSwapModal'
 import SavePlanModal from '@/components/SavePlanModal'
-import { generatePlan, planToText } from '@/lib/programming-logic'
+import { generatePlan, planToText, downloadPlan } from '@/lib/programming-logic'
 import type { WeeklyPlan, PlannerInputs, DayPlan } from '@/lib/programming-logic'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 import { useScrollReveal } from '@/hooks/useScrollReveal'
+import Toast from '@/components/Toast'
+import { useToast } from '@/hooks/useToast'
 
 export default function PlannerPage() {
   const [plan, setPlan] = useState<WeeklyPlan | null>(null)
@@ -23,6 +25,7 @@ export default function PlannerPage() {
   const [user, setUser] = useState<User | null>(null)
 
   const supabase = createClient()
+  const { toast, showToast } = useToast()
   useScrollReveal([plan])
 
   useEffect(() => {
@@ -131,6 +134,12 @@ export default function PlannerPage() {
                   {copied ? 'Copied ✓' : 'Copy to clipboard'}
                 </button>
                 <button
+                  onClick={() => downloadPlan(plan)}
+                  className="btn-secondary text-xs px-4 py-2"
+                >
+                  Download .txt
+                </button>
+                <button
                   onClick={() => setShowSaveModal(true)}
                   className="btn-primary text-xs px-4 py-2"
                 >
@@ -140,7 +149,7 @@ export default function PlannerPage() {
             </div>
 
             {/* Weekly grid */}
-            <WeeklyGrid plan={plan} />
+            <WeeklyGrid plan={plan} onSwap={setSwapDayIndex} swappable={true} />
 
             {/* Programming notes */}
             <div className="mt-8 max-w-3xl reveal">
@@ -166,7 +175,7 @@ export default function PlannerPage() {
         <SessionSwapModal
           plan={plan}
           dayIndex={swapDayIndex}
-          onSelect={handleSwap}
+          onSelect={(dayIndex, newSession) => { handleSwap(dayIndex, newSession); showToast('Session swapped') }}
           onClose={() => setSwapDayIndex(null)}
         />
       )}
@@ -179,6 +188,8 @@ export default function PlannerPage() {
           onClose={() => setShowSaveModal(false)}
         />
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} />}
     </div>
   )
 }

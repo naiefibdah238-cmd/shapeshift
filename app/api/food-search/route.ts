@@ -41,6 +41,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ results })
   } catch {
-    return NextResponse.json({ results: [] }, { status: 500 })
+    return NextResponse.json({ results: [], error: 'Food search unavailable. Try again.' }, { status: 500 })
   }
 }

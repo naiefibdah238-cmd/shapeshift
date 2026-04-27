@@ -18,6 +18,8 @@ export default function SessionSwapModal({ plan, dayIndex, onSelect, onClose }: 
   const currentDay = plan.days[dayIndex]
   const swapOptions = getValidSwapsForDay(plan, dayIndex)
 
+  const titleId = 'swap-modal-title'
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
@@ -32,12 +34,17 @@ export default function SessionSwapModal({ plan, dayIndex, onSelect, onClose }: 
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-ink/40 backdrop-blur-sm"
       onClick={e => { if (e.target === overlayRef.current) onClose() }}
     >
-      <div className="w-full sm:max-w-lg bg-paper border border-rule shadow-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="w-full sm:max-w-lg bg-paper border border-rule shadow-2xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-rule">
           <div>
             <p className="text-2xs font-semibold tracking-widest uppercase text-muted">{DAYS[dayIndex]}</p>
-            <p className="text-sm font-medium text-ink mt-0.5">Swap session</p>
+            <p id={titleId} className="text-sm font-medium text-ink mt-0.5">Swap session</p>
           </div>
           <button onClick={onClose} className="text-muted hover:text-ink transition-colors p-1">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

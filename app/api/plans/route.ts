@@ -1,5 +1,13 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse, type NextRequest } from 'next/server'
+import { z } from 'zod'
+
+const CreatePlanSchema = z.object({
+  name: z.string().max(100).optional(),
+  inputs: z.record(z.string(), z.unknown()),
+  schedule: z.array(z.record(z.string(), z.unknown())),
+  programming_notes: z.string().max(5000).optional(),
+})
 
 export async function GET() {
   const supabase = await createClient()
@@ -21,12 +29,13 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json()
-  const { name, inputs, schedule, programming_notes } = body
-
-  if (!inputs || !schedule) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  const body = await request.json().catch(() => null)
+  const parsed = CreatePlanSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 })
   }
+
+  const { name, inputs, schedule, programming_notes } = parsed.data
 
   const { data, error } = await supabase
     .from('plans')

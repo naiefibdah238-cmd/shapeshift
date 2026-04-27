@@ -22,18 +22,23 @@ const GOAL_LABELS: Record<string, string> = {
   recomp: 'Body recomp',
 }
 
+function formatLocalDate(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function getWeekRange() {
   const now = new Date()
   const day = now.getDay()
   const monday = new Date(now)
   monday.setDate(now.getDate() - ((day + 6) % 7))
-  monday.setHours(0, 0, 0, 0)
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
   return {
-    from: monday.toISOString().split('T')[0],
-    to: sunday.toISOString().split('T')[0],
+    from: formatLocalDate(monday),
+    to: formatLocalDate(sunday),
   }
 }
 
@@ -100,39 +105,45 @@ export default async function DashboardPage() {
         )}
 
         {!plans || plans.length === 0 ? (
-          <div className="border border-rule bg-white p-12 text-center">
-            <p className="text-sm text-muted mb-4">No plans saved yet.</p>
-            <Link href="/planner" className="btn-primary text-xs px-6 py-3">
-              Open the planner
-            </Link>
+          <div className="border border-rule bg-white px-8 py-20 text-center">
+            <div className="max-w-xs mx-auto">
+              <p className="text-2xl font-bold text-ink mb-3">No plans yet</p>
+              <p className="text-sm text-muted mb-8 leading-relaxed">
+                Answer a few questions about your training and we'll build a smart hybrid week around your schedule.
+              </p>
+              <Link href="/planner" className="btn-primary px-8 py-3 text-sm">
+                Build my first plan
+              </Link>
+              <p className="text-2xs text-muted mt-4">Free forever · Takes 2 minutes</p>
+            </div>
           </div>
         ) : (
-          <div className="border border-rule divide-y divide-rule">
-            <div className="grid grid-cols-12 px-6 py-3 bg-cream">
-              <span className="col-span-5 text-2xs font-semibold tracking-widest uppercase text-muted">Name</span>
-              <span className="col-span-3 text-2xs font-semibold tracking-widest uppercase text-muted">Goal</span>
-              <span className="col-span-2 text-2xs font-semibold tracking-widest uppercase text-muted">Days</span>
-              <span className="col-span-2 text-2xs font-semibold tracking-widest uppercase text-muted">Saved</span>
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {(plans as SavedPlan[]).map(plan => (
               <Link
                 key={plan.id}
                 href={`/plan/${plan.id}`}
-                className="grid grid-cols-12 px-6 py-4 items-center hover:bg-cream transition-colors group"
+                className="group border border-rule bg-white hover:border-ink transition-colors p-6 flex flex-col gap-4"
               >
-                <span className="col-span-5 text-sm font-medium text-ink group-hover:text-accent transition-colors truncate pr-4">
-                  {plan.name}
-                </span>
-                <span className="col-span-3 text-sm text-muted">
-                  {GOAL_LABELS[plan.inputs?.primaryGoal] ?? plan.inputs?.primaryGoal}
-                </span>
-                <span className="col-span-2 text-sm text-muted">
-                  {plan.inputs?.trainingDays} days/wk
-                </span>
-                <span className="col-span-2 text-sm text-muted">
-                  {new Date(plan.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </span>
+                <div className="flex-1">
+                  <p className="text-base font-semibold text-ink group-hover:text-accent transition-colors leading-snug mb-3">
+                    {plan.name}
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-2xs font-semibold tracking-widest uppercase border border-rule px-2 py-1 text-muted">
+                      {GOAL_LABELS[plan.inputs?.primaryGoal] ?? plan.inputs?.primaryGoal}
+                    </span>
+                    <span className="text-2xs font-semibold tracking-widest uppercase border border-rule px-2 py-1 text-muted">
+                      {plan.inputs?.trainingDays} days/wk
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-rule">
+                  <span className="text-2xs text-muted">
+                    {new Date(plan.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                  <span className="text-2xs text-muted group-hover:text-accent transition-colors">View →</span>
+                </div>
               </Link>
             ))}
           </div>

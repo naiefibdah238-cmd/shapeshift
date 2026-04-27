@@ -54,6 +54,7 @@ export default function PlannerForm({ onGenerate, loading }: Props) {
     enduranceVolume: 'moderate',
     includeMobility: false,
     recoveryPriority: 'average',
+    isDeload: false,
   })
 
   function set<K extends keyof PlannerInputs>(key: K, value: PlannerInputs[K]) {
@@ -166,6 +167,25 @@ export default function PlannerForm({ onGenerate, loading }: Props) {
             { value: 'careful', label: 'Needs sequencing',  sub: 'High life stress, limited sleep' },
           ]}
         />
+      </div>
+
+      <div className="animate-fade-up" style={{ animationDelay: '480ms', animationFillMode: 'both' }}>
+        <span className="label">Is this a deload week?</span>
+        <div className="grid grid-cols-2 gap-2">
+          {([false, true] as const).map(val => (
+            <button
+              key={String(val)}
+              type="button"
+              onClick={() => set('isDeload', val)}
+              className={`select-option text-left ${inputs.isDeload === val ? 'selected' : ''}`}
+            >
+              <span className="flex flex-col gap-0.5">
+                <span className="font-medium text-sm">{val ? 'Yes — deload' : 'No — full week'}</span>
+                <span className="text-2xs opacity-70">{val ? '40% volume, same structure' : 'Normal training week'}</span>
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="pt-2 animate-fade-up" style={{ animationDelay: '560ms', animationFillMode: 'both' }}>

@@ -13,7 +13,7 @@ function SignupForm() {
   const [done, setDone] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') ?? '/dashboard'
+  const next = searchParams.get('next') ?? '/planner'
   const supabase = createClient()
 
   async function handleSubmit(e: React.FormEvent) {

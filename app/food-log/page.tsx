@@ -5,15 +5,20 @@ import { useRouter } from 'next/navigation'
 import NavBar from '@/components/NavBar'
 import Footer from '@/components/Footer'
 import AddFoodModal from '@/components/AddFoodModal'
+import Toast from '@/components/Toast'
 import { createClient } from '@/lib/supabase'
 import type { FoodEntry, MealType, NutritionTarget } from '@/lib/food-log'
 import { MEALS, MEAL_LABELS } from '@/lib/food-log'
 import type { User } from '@supabase/supabase-js'
+import { useToast } from '@/hooks/useToast'
 
 const DEFAULT_TARGETS: NutritionTarget = { calories: 2500, protein_g: 180, carbs_g: 250, fat_g: 80 }
 
 function formatDate(d: Date) {
-  return d.toISOString().split('T')[0]
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 function displayDate(d: Date) {
@@ -25,11 +30,10 @@ function displayDate(d: Date) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
-function getWeekDays() {
-  const today = new Date()
-  const day = today.getDay()
-  const monday = new Date(today)
-  monday.setDate(today.getDate() - ((day + 6) % 7))
+function getWeekDays(reference: Date) {
+  const day = reference.getDay()
+  const monday = new Date(reference)
+  monday.setDate(reference.getDate() - ((day + 6) % 7))
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
@@ -65,6 +69,7 @@ export default function FoodLogPage() {
   const [streak, setStreak] = useState(0)
   const [weekData, setWeekData] = useState<DaySummary[]>([])
   const [copyMsg, setCopyMsg] = useState('')
+  const { toast, showToast } = useToast()
   const supabase = createClient()
   const router = useRouter()
 
@@ -111,7 +116,7 @@ export default function FoodLogPage() {
 
   const loadWeekData = useCallback(async () => {
     if (!user) return
-    const days = getWeekDays()
+    const days = getWeekDays(date)
     const from = formatDate(days[0])
     const to = formatDate(days[6])
     const { data } = await supabase.from('food_log').select('logged_date, calories, protein_g, carbs_g, fat_g')
@@ -126,7 +131,7 @@ export default function FoodLogPage() {
       byDate[e.logged_date].fat_g += Number(e.fat_g)
     }
     setWeekData(days.map(d => byDate[formatDate(d)] ?? { date: formatDate(d), calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }))
-  }, [user])
+  }, [user, date])
 
   useEffect(() => {
     if (user) { loadEntries(); loadTargets(); loadStreak(); loadWeekData() }
@@ -134,14 +139,18 @@ export default function FoodLogPage() {
 
   async function handleAdd(entry: Omit<FoodEntry, 'id' | 'logged_date'>) {
     if (!user) return
-    await supabase.from('food_log').insert({ ...entry, user_id: user.id, logged_date: formatDate(date) })
+    const { error } = await supabase.from('food_log').insert({ ...entry, user_id: user.id, logged_date: formatDate(date) })
+    if (error) { showToast('Failed to add entry. Try again.', 'error'); return }
     setAddMeal(null)
     loadEntries()
     loadWeekData()
+    loadStreak()
+    showToast('Entry added')
   }
 
   async function handleDelete(id: string) {
-    await supabase.from('food_log').delete().eq('id', id)
+    const { error } = await supabase.from('food_log').delete().eq('id', id)
+    if (error) { showToast('Failed to delete entry. Try again.', 'error'); return }
     loadEntries()
     loadWeekData()
   }
@@ -153,7 +162,8 @@ export default function FoodLogPage() {
       .select('meal_type, food_name, calories, protein_g, carbs_g, fat_g, grams')
       .eq('user_id', user.id).eq('logged_date', yesterday)
     if (!data || data.length === 0) { setCopyMsg('Nothing logged yesterday.'); setTimeout(() => setCopyMsg(''), 3000); return }
-    await supabase.from('food_log').insert(data.map(e => ({ ...e, user_id: user.id, logged_date: formatDate(date) })))
+    const { error } = await supabase.from('food_log').insert(data.map(e => ({ ...e, user_id: user.id, logged_date: formatDate(date) })))
+    if (error) { showToast('Failed to copy meals. Try again.', 'error'); return }
     loadEntries()
     loadWeekData()
     setCopyMsg(`Copied ${data.length} item${data.length > 1 ? 's' : ''} from yesterday.`)
@@ -162,9 +172,11 @@ export default function FoodLogPage() {
 
   async function handleSaveTargets(t: NutritionTarget) {
     if (!user) return
-    await supabase.from('nutrition_targets').upsert({ user_id: user.id, ...t, updated_at: new Date().toISOString() })
+    const { error } = await supabase.from('nutrition_targets').upsert({ user_id: user.id, ...t, updated_at: new Date().toISOString() })
+    if (error) { showToast('Failed to save targets. Try again.', 'error'); return }
     setTargets(t)
     setShowTargets(false)
+    showToast('Targets saved')
   }
 
   const totals = entries.reduce(
@@ -175,7 +187,19 @@ export default function FoodLogPage() {
   const isOver = remaining < 0
   const isToday = formatDate(date) === formatDate(new Date())
 
-  if (loading) return null
+  if (loading) return (
+    <div className="flex flex-col min-h-screen">
+      <NavBar />
+      <div className="h-52 lg:h-64 bg-stone-900 animate-pulse" />
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10 space-y-6">
+        <div className="h-6 w-32 bg-rule rounded animate-pulse" />
+        <div className="h-36 bg-rule rounded animate-pulse" />
+        <div className="space-y-3">
+          {[1,2,3,4].map(i => <div key={i} className="h-16 bg-rule rounded animate-pulse" />)}
+        </div>
+      </main>
+    </div>
+  )
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -323,18 +347,32 @@ export default function FoodLogPage() {
 
       {addMeal && <AddFoodModal meal={addMeal} onAdd={handleAdd} onClose={() => setAddMeal(null)} />}
       {showTargets && <TargetsModal current={targets} onSave={handleSaveTargets} onClose={() => setShowTargets(false)} />}
+      {toast && <Toast message={toast.message} type={toast.type} />}
     </div>
   )
 }
 
 function TargetsModal({ current, onSave, onClose }: { current: NutritionTarget; onSave: (t: NutritionTarget) => void; onClose: () => void }) {
-  const [t, setT] = useState(current)
-  const fields: { key: keyof NutritionTarget; label: string }[] = [
+  const [t, setT] = useState({
+    calories: String(current.calories),
+    protein_g: String(current.protein_g),
+    carbs_g: String(current.carbs_g),
+    fat_g: String(current.fat_g),
+  })
+  const fields: { key: keyof typeof t; label: string }[] = [
     { key: 'calories', label: 'Calories (kcal)' },
     { key: 'protein_g', label: 'Protein (g)' },
     { key: 'carbs_g', label: 'Carbs (g)' },
     { key: 'fat_g', label: 'Fat (g)' },
   ]
+  function handleSave() {
+    onSave({
+      calories: parseInt(t.calories) || 0,
+      protein_g: parseInt(t.protein_g) || 0,
+      carbs_g: parseInt(t.carbs_g) || 0,
+      fat_g: parseInt(t.fat_g) || 0,
+    })
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 backdrop-blur-sm p-4">
       <div className="bg-white w-full max-w-sm border border-rule animate-fade-up">
@@ -346,12 +384,18 @@ function TargetsModal({ current, onSave, onClose }: { current: NutritionTarget; 
           {fields.map(f => (
             <div key={f.key}>
               <label className="label">{f.label}</label>
-              <input type="number" value={t[f.key]} onChange={e => setT(prev => ({ ...prev, [f.key]: parseInt(e.target.value) || 0 }))} className="input-field" min={0} />
+              <input
+                type="number"
+                value={t[f.key]}
+                onChange={e => setT(prev => ({ ...prev, [f.key]: e.target.value }))}
+                className="input-field"
+                min={0}
+              />
             </div>
           ))}
         </div>
         <div className="px-6 pb-6">
-          <button onClick={() => onSave(t)} className="btn-primary w-full text-sm py-3">Save targets</button>
+          <button onClick={handleSave} className="btn-primary w-full text-sm py-3">Save targets</button>
         </div>
       </div>
     </div>

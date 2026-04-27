@@ -17,6 +17,7 @@ export interface PlannerInputs {
   enduranceVolume: EnduranceVolume
   includeMobility: boolean
   recoveryPriority: RecoveryPriority
+  isDeload?: boolean
 }
 
 export type SessionType =
@@ -598,6 +599,52 @@ function generateProgrammingNotes(schedule: (SessionType | null)[], inputs: Plan
 }
 
 // ---------------------------------------------------------------------------
+// Deload transformations
+// ---------------------------------------------------------------------------
+
+const DELOAD_SESSION_MAP: Partial<Record<SessionType, SessionType>> = {
+  lower_strength:     'lower_hypertrophy',
+  upper_strength:     'upper_hypertrophy',
+  full_body_strength: 'full_body_accessory',
+  long_endurance:     'zone2_medium',
+  tempo:              'zone2_short',
+  intervals:          'zone2_short',
+}
+
+const DELOAD_DURATION: Partial<Record<SessionType, string>> = {
+  lower_hypertrophy:   '45–55 min',
+  upper_hypertrophy:   '40–50 min',
+  full_body_accessory: '35–45 min',
+  zone2_medium:        '35–45 min',
+  zone2_short:         '25–30 min',
+  mobility:            '30–40 min',
+}
+
+function applyDeload(days: DayPlan[], inputs: PlannerInputs): DayPlan[] {
+  return days.map(day => {
+    if (day.sessionType === 'rest') return day
+    const deloadType = DELOAD_SESSION_MAP[day.sessionType] ?? day.sessionType
+    return {
+      ...day,
+      sessionType: deloadType,
+      sessionName: `Deload — ${getSessionName(deloadType, inputs)}`,
+      estimatedDuration: DELOAD_DURATION[deloadType] ?? day.estimatedDuration,
+      rationale: 'Deload week: cut volume by 40%, keep weights the same. Focus on quality movement, not effort.',
+    }
+  })
+}
+
+function generateDeloadNotes(inputs: PlannerInputs): string {
+  const enduranceLabel = { running: 'running', cycling: 'riding', rowing: 'rowing', mixed: 'endurance work' }[inputs.enduranceFocus]
+  return [
+    `This is your deload week. The day structure is identical to your normal training week — only the sessions have changed. Heavy lifting is replaced with hypertrophy or accessory work, and any hard cardio drops to easy aerobic sessions.`,
+    `Cut your usual sets by 40–50% and keep the weights the same. The goal is not to train hard — it is to flush accumulated fatigue and let your body lock in the adaptations from the previous 3–4 weeks. You should feel almost under-stimulated. That is the point.`,
+    `Keep RPE at 6 or below on all lifting. For ${enduranceLabel}, stay strictly in zone 2 and cut duration by a third. Resist the urge to push on the last day because you feel fresh — you feel fresh because you rested.`,
+    `Resume your normal plan the following Monday. If you still feel flat or beat up, extend the deload by 2–3 days before ramping back up.`,
+  ].join('\n\n')
+}
+
+// ---------------------------------------------------------------------------
 // Public API: generatePlan
 // ---------------------------------------------------------------------------
 
@@ -617,7 +664,7 @@ export function generatePlan(inputs: PlannerInputs, seed = 0): WeeklyPlan {
   // Fill empty slots with rest
   const schedule = rawSchedule.map(s => s ?? ('rest' as SessionType))
 
-  const days: DayPlan[] = schedule.map((sessionType, i) => ({
+  let days: DayPlan[] = schedule.map((sessionType, i) => ({
     day: DAYS[i],
     sessionType,
     sessionName: getSessionName(sessionType, inputs),
@@ -625,7 +672,13 @@ export function generatePlan(inputs: PlannerInputs, seed = 0): WeeklyPlan {
     rationale: generateRationale(sessionType, i, schedule, inputs),
   }))
 
-  const programmingNotes = generateProgrammingNotes(schedule, inputs)
+  if (inputs.isDeload) {
+    days = applyDeload(days, inputs)
+  }
+
+  const programmingNotes = inputs.isDeload
+    ? generateDeloadNotes(inputs)
+    : generateProgrammingNotes(schedule, inputs)
 
   return { days, programmingNotes, inputs }
 }
@@ -1035,4 +1088,17 @@ export function planToText(plan: WeeklyPlan): string {
   lines.push(plan.programmingNotes)
 
   return lines.join('\n')
+}
+
+export function downloadPlan(plan: WeeklyPlan): void {
+  const text = planToText(plan)
+  const blob = new Blob([text], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${plan.inputs.isDeload ? 'deload' : 'training'}-week.txt`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }

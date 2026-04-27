@@ -1,15 +1,17 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
 import Footer from '@/components/Footer'
 import WeeklyGrid from '@/components/WeeklyGrid'
 import SessionSwapModal from '@/components/SessionSwapModal'
-import { generatePlan } from '@/lib/programming-logic'
+import { generatePlan, downloadPlan } from '@/lib/programming-logic'
 import type { WeeklyPlan, DayPlan } from '@/lib/programming-logic'
 import { createClient } from '@/lib/supabase'
+import Toast from '@/components/Toast'
+import { useToast } from '@/hooks/useToast'
 
 interface DBPlan {
   id: string
@@ -43,6 +45,7 @@ export default function PlanDetailPage() {
   const [showRegenConfirm, setShowRegenConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [seed, setSeed] = useState(1)
+  const { toast, showToast } = useToast()
 
   useEffect(() => {
     async function load() {
@@ -71,9 +74,9 @@ export default function PlanDetailPage() {
     load()
   }, [id])
 
-  async function savePlanToDB(updatedPlan: WeeklyPlan, newName?: string) {
-    if (!dbPlan) return
-    await supabase
+  async function savePlanToDB(updatedPlan: WeeklyPlan, newName?: string): Promise<boolean> {
+    if (!dbPlan) return false
+    const { error } = await supabase
       .from('plans')
       .update({
         schedule: updatedPlan.days,
@@ -83,38 +86,49 @@ export default function PlanDetailPage() {
         updated_at: new Date().toISOString(),
       })
       .eq('id', dbPlan.id)
+    if (error) {
+      showToast('Failed to save changes. Try again.', 'error')
+      return false
+    }
+    return true
   }
 
   async function handleSaveName() {
     if (!plan || !nameValue.trim()) return
     setSavingName(true)
-    await savePlanToDB(plan, nameValue.trim())
-    setDbPlan(prev => prev ? { ...prev, name: nameValue.trim() } : prev)
+    const ok = await savePlanToDB(plan, nameValue.trim())
+    if (ok) {
+      setDbPlan(prev => prev ? { ...prev, name: nameValue.trim() } : prev)
+      setEditingName(false)
+      showToast('Name saved')
+    }
     setSavingName(false)
-    setEditingName(false)
   }
 
-  function handleSwap(dayIndex: number, newSession: DayPlan) {
+  async function handleSwap(dayIndex: number, newSession: DayPlan) {
     if (!plan) return
     const newDays = plan.days.map((d, i) => i === dayIndex ? newSession : d)
     const updatedPlan = { ...plan, days: newDays }
     setPlan(updatedPlan)
     setSwapDayIndex(null)
-    savePlanToDB(updatedPlan)
+    const ok = await savePlanToDB(updatedPlan)
+    if (ok) showToast('Session swapped')
   }
 
-  function handleRegenerate() {
+  async function handleRegenerate() {
     if (!plan) return
     const newPlan = generatePlan(plan.inputs, seed)
     setPlan(newPlan)
     setSeed(s => s + 1)
     setShowRegenConfirm(false)
-    savePlanToDB(newPlan)
+    const ok = await savePlanToDB(newPlan)
+    if (ok) showToast('Plan regenerated')
   }
 
   async function handleDelete() {
     if (!dbPlan) return
-    await supabase.from('plans').delete().eq('id', dbPlan.id)
+    const { error } = await supabase.from('plans').delete().eq('id', dbPlan.id)
+    if (error) { showToast('Failed to delete plan. Try again.', 'error'); return }
     router.push('/dashboard')
   }
 
@@ -192,6 +206,9 @@ export default function PlanDetailPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              <button onClick={() => plan && downloadPlan(plan)} className="text-xs text-white/70 hover:text-white border border-white/30 hover:border-white/60 px-4 py-2 transition-all">
+                Download
+              </button>
               <button onClick={() => setShowRegenConfirm(true)} className="text-xs text-white/70 hover:text-white border border-white/30 hover:border-white/60 px-4 py-2 transition-all">
                 Regenerate
               </button>
@@ -225,6 +242,8 @@ export default function PlanDetailPage() {
       </main>
 
       <Footer />
+
+      {toast && <Toast message={toast.message} type={toast.type} />}
 
       {/* Swap modal */}
       {swapDayIndex !== null && (

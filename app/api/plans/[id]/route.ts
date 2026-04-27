@@ -1,5 +1,13 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse, type NextRequest } from 'next/server'
+import { z } from 'zod'
+
+const UpdatePlanSchema = z.object({
+  name: z.string().max(100).optional(),
+  inputs: z.record(z.string(), z.unknown()).optional(),
+  schedule: z.array(z.record(z.string(), z.unknown())).optional(),
+  programming_notes: z.string().max(5000).optional(),
+})
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -24,9 +32,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json()
-  const { name, inputs, schedule, programming_notes } = body
+  const body = await request.json().catch(() => null)
+  const parsed = UpdatePlanSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid request', details: parsed.error.flatten() }, { status: 400 })
+  }
 
+  const { name, inputs, schedule, programming_notes } = parsed.data
   const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (name !== undefined) updateData.name = name
   if (inputs !== undefined) updateData.inputs = inputs
