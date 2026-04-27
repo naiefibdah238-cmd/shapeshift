@@ -4,10 +4,12 @@ import { useState } from 'react'
 import NavBar from '@/components/NavBar'
 import Footer from '@/components/Footer'
 import Toast from '@/components/Toast'
+import ParallaxHero from '@/components/ParallaxHero'
 import { calculateNutrition } from '@/lib/nutrition-logic'
 import type { NutritionInputs, NutritionResult, Sex, ActivityLevel, NutritionGoal } from '@/lib/nutrition-logic'
 import { useScrollReveal } from '@/hooks/useScrollReveal'
 import { useToast } from '@/hooks/useToast'
+import { useCountUp } from '@/hooks/useCountUp'
 import { createClient } from '@/lib/supabase'
 
 type Units = 'metric' | 'imperial'
@@ -26,6 +28,20 @@ const ACTIVITY_LABELS: Record<ActivityLevel, { label: string; sub: string }> = {
   moderate:    { label: 'Moderate',       sub: '3–5 training days/wk' },
   active:      { label: 'Very active',    sub: '6–7 training days/wk' },
   very_active: { label: 'Athlete',        sub: 'Daily training + physical job' },
+}
+
+function StatBox({ label, value, sub, index }: { label: string; value: number; sub: string; index: number }) {
+  const animated = useCountUp(value)
+  return (
+    <div
+      className="bg-white px-6 py-5 animate-fade-up"
+      style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
+    >
+      <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-1">{label}</p>
+      <p className="text-3xl font-bold text-ink tracking-tight">{animated.toLocaleString()}</p>
+      <p className="text-2xs text-muted mt-1">{sub}</p>
+    </div>
+  )
 }
 
 function MacroBar({ label, grams, calories, total, color }: {
@@ -100,19 +116,13 @@ export default function NutritionPage() {
     <div className="flex flex-col min-h-screen">
       <NavBar />
 
-      {/* Page hero */}
-      <section className="relative h-52 lg:h-64 flex items-end overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center scale-105"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1800&q=80&fit=crop')` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/70 to-ink/40" />
+      <ParallaxHero imageUrl="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1800&q=80&fit=crop">
         <div className="relative z-10 max-w-6xl mx-auto w-full px-6 pb-8 animate-fade-up">
           <p className="text-2xs font-bold tracking-widest uppercase text-accent mb-2">Nutrition calculator</p>
           <h1 className="text-3xl lg:text-4xl font-bold text-white tracking-tight">Fuel your training.</h1>
           <p className="text-sm text-white/60 mt-1">How many calories to eat, what to eat, and when — for hybrid athletes. Starting points, not rules.</p>
         </div>
-      </section>
+      </ParallaxHero>
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
 
@@ -244,21 +254,9 @@ export default function NutritionPage() {
 
             {/* Calorie overview */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-rule border border-rule mb-8">
-              {[
-                { label: 'Resting calories', value: result.bmr.toLocaleString(), sub: 'What your body burns just to stay alive' },
-                { label: 'You burn daily', value: result.tdee.toLocaleString(), sub: 'With your current activity level' },
-                { label: 'Your daily target', value: result.targets.calories.toLocaleString(), sub: `Calories to eat to ${GOAL_LABELS[inputs.goal].toLowerCase()}` },
-              ].map((item, i) => (
-                <div
-                  key={item.label}
-                  className="bg-white px-6 py-5 animate-fade-up"
-                  style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'both' }}
-                >
-                  <p className="text-2xs font-semibold tracking-widest uppercase text-muted mb-1">{item.label}</p>
-                  <p className="text-3xl font-bold text-ink tracking-tight">{item.value}</p>
-                  <p className="text-2xs text-muted mt-1">{item.sub}</p>
-                </div>
-              ))}
+              <StatBox label="Resting calories" value={result.bmr} sub="What your body burns just to stay alive" index={0} />
+              <StatBox label="You burn daily" value={result.tdee} sub="With your current activity level" index={1} />
+              <StatBox label="Your daily target" value={result.targets.calories} sub={`Calories to eat to ${GOAL_LABELS[inputs.goal].toLowerCase()}`} index={2} />
             </div>
 
             {/* Macros */}

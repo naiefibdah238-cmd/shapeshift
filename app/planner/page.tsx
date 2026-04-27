@@ -14,6 +14,7 @@ import type { User } from '@supabase/supabase-js'
 import { useScrollReveal } from '@/hooks/useScrollReveal'
 import Toast from '@/components/Toast'
 import { useToast } from '@/hooks/useToast'
+import ParallaxHero from '@/components/ParallaxHero'
 
 export default function PlannerPage() {
   const [plan, setPlan] = useState<WeeklyPlan | null>(null)
@@ -83,19 +84,13 @@ export default function PlannerPage() {
     <div className="flex flex-col min-h-screen">
       <NavBar />
 
-      {/* Page hero */}
-      <section className="relative h-52 lg:h-64 flex items-end overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center scale-105"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1800&q=80&fit=crop')` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/70 to-ink/40" />
+      <ParallaxHero imageUrl="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1800&q=80&fit=crop">
         <div className="relative z-10 max-w-6xl mx-auto w-full px-6 pb-8 animate-fade-up">
           <p className="text-2xs font-bold tracking-widest uppercase text-accent mb-2">Hybrid training planner</p>
           <h1 className="text-3xl lg:text-4xl font-bold text-white tracking-tight">Build your week.</h1>
           <p className="text-sm text-white/60 mt-1">Build and save your training week. Free, always.</p>
         </div>
-      </section>
+      </ParallaxHero>
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12">
 

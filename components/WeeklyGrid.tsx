@@ -54,7 +54,7 @@ function ExercisePanel({ sessionType, inputs }: { sessionType: SessionType; inpu
         <span className="text-xs text-accent font-mono">{open ? '−' : '+'}</span>
       </button>
 
-      {open && (
+      <div className={`overflow-hidden transition-all duration-300 ease-out ${open ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="px-3 pb-3 space-y-1">
           {exercises.map((ex, i) => {
             const detail = ex.sets === '1' ? ex.reps : `${ex.sets} × ${ex.reps}`
@@ -71,7 +71,7 @@ function ExercisePanel({ sessionType, inputs }: { sessionType: SessionType; inpu
             )
           })}
         </div>
-      )}
+      </div>
     </div>
   )
 }

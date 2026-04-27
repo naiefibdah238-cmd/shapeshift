@@ -12,6 +12,7 @@ import type { WeeklyPlan, DayPlan } from '@/lib/programming-logic'
 import { createClient } from '@/lib/supabase'
 import Toast from '@/components/Toast'
 import { useToast } from '@/hooks/useToast'
+import ParallaxHero from '@/components/ParallaxHero'
 
 interface DBPlan {
   id: string
@@ -163,13 +164,7 @@ export default function PlanDetailPage() {
     <div className="flex flex-col min-h-screen">
       <NavBar />
 
-      {/* Hero */}
-      <section className="relative h-52 lg:h-64 flex items-end overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center scale-105"
-          style={{ backgroundImage: `url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1800&q=80&fit=crop')` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-ink/90 via-ink/70 to-ink/40" />
+      <ParallaxHero imageUrl="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1800&q=80&fit=crop">
         <div className="relative z-10 max-w-6xl mx-auto w-full px-6 pb-8 animate-fade-up">
           <Link href="/dashboard" className="text-2xs text-white/40 hover:text-white/70 transition-colors uppercase tracking-widest mb-3 block">
             ← My plans
@@ -218,7 +213,7 @@ export default function PlanDetailPage() {
             </div>
           </div>
         </div>
-      </section>
+      </ParallaxHero>
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
         <p className="text-xs text-muted mb-6 animate-fade-up">

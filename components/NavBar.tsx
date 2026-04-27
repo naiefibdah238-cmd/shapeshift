@@ -123,7 +123,7 @@ export default function NavBar() {
 
       {/* Mobile menu drawer */}
       {open && (
-        <div className="md:hidden fixed inset-0 z-30 flex flex-col" style={{ top: '57px' }}>
+        <div className="md:hidden fixed inset-0 z-30 flex flex-col animate-slide-down" style={{ top: '57px' }}>
           <div className="bg-paper border-b border-rule flex-shrink-0">
             <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col divide-y divide-rule">
               {allLinks.map(l => (

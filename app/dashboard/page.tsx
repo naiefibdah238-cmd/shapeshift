@@ -123,7 +123,7 @@ export default async function DashboardPage() {
               <Link
                 key={plan.id}
                 href={`/plan/${plan.id}`}
-                className="group border border-rule bg-white hover:border-ink transition-colors p-6 flex flex-col gap-4"
+                className="group border border-rule bg-white hover:border-ink hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 p-6 flex flex-col gap-4"
               >
                 <div className="flex-1">
                   <p className="text-base font-semibold text-ink group-hover:text-accent transition-colors leading-snug mb-3">
