@@ -58,7 +58,7 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
   useEffect(() => { setRecentFoods(loadRecent()) }, [])
 
   useEffect(() => {
-    if (query.length < 2) { setResults([]); return }
+    if (query.length < 2) { setResults([]); setSearching(false); return }
 
     const controller = new AbortController()
     const timer = setTimeout(async () => {
@@ -67,10 +67,13 @@ export default function AddFoodModal({ meal, onAdd, onClose }: Props) {
         const res = await fetch(`/api/food-search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
         const data = await res.json()
         setResults(data.results ?? [])
+        setSearching(false)
       } catch (err) {
-        if (err instanceof Error && err.name !== 'AbortError') setResults([])
+        if (err instanceof Error && err.name !== 'AbortError') {
+          setResults([])
+          setSearching(false)
+        }
       }
-      setSearching(false)
     }, 400)
 
     return () => {
