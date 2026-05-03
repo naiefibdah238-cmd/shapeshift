@@ -27,19 +27,24 @@ function SignupForm() {
       return
     }
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${next}` },
-    })
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${next}` },
+      })
 
-    if (error) {
-      setError(error.message)
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      setDone(true)
+    } catch {
+      setError('Something went wrong. Please check your connection and try again.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    setDone(true)
   }
 
   if (done) {
